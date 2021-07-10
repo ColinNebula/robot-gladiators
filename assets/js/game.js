@@ -6,7 +6,20 @@ var playerMoney = 10;
 // You can also log multiple values at once like this
 console.log(playerName, playerAttack, playerHealth);
 
-var enemyName = "Roborto";
+var enemyNames = ["Roborto", "Amy Android", "Robo Trumble"];
+console.log(enemyNames. length);
+console.log(enemyNames[0]);
+console.log(enemyNames[1]);
+console.log(enemyNames[2]);
+for(var i = 0; i < enemyNames.length; i++) {
+  console.log(enemyNames[i]);
+  console.log(i);
+  console.log(enemyNames[i] + " is at " + i + " index");
+}
+
+var enemy1 = "Roborto";
+var enemy2 = "Amy Android";
+var enemy3 = "Robo Rumble";
 var enemyHealth = 50;
 var enemyAttack = 12;
 
@@ -59,10 +72,13 @@ if (promptFight === "fight" || promptFight === "FIGHT") {
     fight();
   }
 }
-  window.alert(playerName + " has chosen to skip the fight!");
-} else {
-  window.alert("You need to choose a valid option. Try again!");
-}
 }
 
-//fight();
+var fight = function(enemyName) {
+  
+};
+// Game States
+// "WIN" - Player robot has defeated all enemy-robots
+//    * Fight all enemy-robots
+//    * Defeat each enemy-robot
+// "LOSE" - Player robot's health is zero or less
