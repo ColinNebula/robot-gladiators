@@ -1503,7 +1503,45 @@ const SideScroller = ({ character }) => {
     
     function pollGamepad() {
       // Don't process gamepad input when paused or game over
-      if (isPaused || gameOver.active) return;
+      if (isPaused || gameOver.active) {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const gp = gamepads[0];
+        if (gp) {
+          const gamepadType = detectGamepadType(gp);
+          // Only handle PS4/PS5 controller menu actions
+          if (gamepadType === 'PS5') {
+            // X (❌) is button 0, Circle (⭕) is button 1
+            const xPressed = gp.buttons[0]?.pressed;
+            const circlePressed = gp.buttons[1]?.pressed;
+            // Use a ref to debounce presses
+            if (!pollGamepad.lastMenuState) pollGamepad.lastMenuState = { x: false, circle: false };
+            // Confirm/Select (X)
+            if (xPressed && !pollGamepad.lastMenuState.x) {
+              if (isPaused && !gameOver.active) {
+                setIsPaused(false); // Resume game
+              } else if (gameOver.active) {
+                // Play Again (first button)
+                // Simulate click on Play Again button
+                const playAgainBtn = document.querySelector('button');
+                if (playAgainBtn) playAgainBtn.click();
+              }
+            }
+            // Cancel/Back (Circle)
+            if (circlePressed && !pollGamepad.lastMenuState.circle) {
+              if (isPaused && !gameOver.active) {
+                setIsPaused(false); // Cancel pause
+              } else if (gameOver.active) {
+                // Main Menu (second button)
+                const menuBtns = document.querySelectorAll('button');
+                if (menuBtns.length > 1) menuBtns[1].click();
+              }
+            }
+            pollGamepad.lastMenuState.x = xPressed;
+            pollGamepad.lastMenuState.circle = circlePressed;
+          }
+        }
+        return; // Don't process normal game controls
+      }
       
       const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
       const gp = gamepads[0];
@@ -1514,31 +1552,28 @@ const SideScroller = ({ character }) => {
         // PS5 DualSense specific mappings
         const buttonMap = {
           PS5: {
-            jump: [1], // Circle - changed to only circle for jump
             leftPunch: [2], // Square 🔲
             rightPunch: [3], // Triangle 🔺  
             leftKick: [0], // X/Cross ❌
-            rightKick: [1], // Circle ⭕ - also used for right kick
+            rightKick: [1], // Circle ⭕
             special: [4, 5], // L1 and R1
             pause: [9], // Options button
             heavy: [6, 7] // L2 and R2 triggers
           },
           Xbox: {
-            jump: [1], // B button
             leftPunch: [2], // X button
             rightPunch: [3], // Y button
             leftKick: [0], // A button  
-            rightKick: [1], // B button - also used for right kick
+            rightKick: [1], // B button
             special: [4, 5], // LB and RB
             pause: [7], // Menu button
             heavy: [6, 7] // LT and RT triggers
           },
           Generic: {
-            jump: [1], // Button 1
             leftPunch: [2], // Button 2
             rightPunch: [3], // Button 3
             leftKick: [0], // Button 0
-            rightKick: [1], // Button 1 - also used for right kick
+            rightKick: [1], // Button 1
             special: [4, 5], // Button 4 and 5
             pause: [8, 9], // Button 8 and 9
             heavy: [6, 7] // Button 6 and 7
@@ -1579,12 +1614,15 @@ const SideScroller = ({ character }) => {
           playerRef.current.vx = 0;
         }
         
-        // Jump (multiple button support)
-        const jumpPressed = controls.jump.some(btn => gp.buttons[btn]?.pressed);
+        // Jump using D-pad up or left analog stick up
+        const dpadUpPressed = dpadY < -0.5; // D-pad up
+        const analogUpPressed = leftStickY < -0.5; // Left analog stick up
+        const jumpPressed = dpadUpPressed || analogUpPressed;
+        
         if (jumpPressed && playerRef.current.onGround) {
           playerRef.current.vy = -JUMP_POWER;
           playerRef.current.onGround = false;
-          console.log(`${gamepadType} controller: Jump activated`);
+          console.log(`${gamepadType} controller: Jump activated via D-pad/analog stick`);
         }
         
         // Enhanced Combat Controls (PS4/PS5 Controller Mapping)
@@ -1594,7 +1632,7 @@ const SideScroller = ({ character }) => {
         const leftPunchPressed = controls.leftPunch?.some(btn => gp.buttons[btn]?.pressed);
         const lastLeftPunchPressed = controls.leftPunch?.some(btn => lastGamepadState.buttons[btn]);
         if (leftPunchPressed && !lastLeftPunchPressed) {
-          performCombatAttack('leftPunch');
+          performCombatAttack('left-punch');
           newActiveKeys.q = true;
           console.log(`${gamepadType} controller: Left Punch (Square) activated`);
         } else if (!leftPunchPressed) {
@@ -1605,7 +1643,7 @@ const SideScroller = ({ character }) => {
         const rightPunchPressed = controls.rightPunch?.some(btn => gp.buttons[btn]?.pressed);
         const lastRightPunchPressed = controls.rightPunch?.some(btn => lastGamepadState.buttons[btn]);
         if (rightPunchPressed && !lastRightPunchPressed) {
-          performCombatAttack('rightPunch');
+          performCombatAttack('right-punch');
           newActiveKeys.e = true;
           console.log(`${gamepadType} controller: Right Punch (Triangle) activated`);
         } else if (!rightPunchPressed) {
@@ -1616,7 +1654,7 @@ const SideScroller = ({ character }) => {
         const leftKickPressed = controls.leftKick?.some(btn => gp.buttons[btn]?.pressed);
         const lastLeftKickPressed = controls.leftKick?.some(btn => lastGamepadState.buttons[btn]);
         if (leftKickPressed && !lastLeftKickPressed) {
-          performCombatAttack('leftKick');
+          performCombatAttack('left-kick');
           newActiveKeys.f = true;
           console.log(`${gamepadType} controller: Left Kick (X/Cross) activated`);
         } else if (!leftKickPressed) {
@@ -1627,7 +1665,7 @@ const SideScroller = ({ character }) => {
         const rightKickPressed = controls.rightKick?.some(btn => gp.buttons[btn]?.pressed);
         const lastRightKickPressed = controls.rightKick?.some(btn => lastGamepadState.buttons[btn]);
         if (rightKickPressed && !lastRightKickPressed && !jumpPressed) { // Prevent conflict with jump
-          performCombatAttack('rightKick');
+          performCombatAttack('right-kick');
           newActiveKeys.g = true;
           console.log(`${gamepadType} controller: Right Kick (Circle) activated`);
         } else if (!rightKickPressed) {
@@ -1900,7 +1938,7 @@ const SideScroller = ({ character }) => {
           <div style={{ textAlign: 'left', flex: 1 }}>
             <div><strong>🎮 Basic Controls:</strong></div>
             <div>Move: ← → / A D / Left Stick</div>
-            <div>Jump: ↑ W Space / ⭕ Circle (PS5) / B (Xbox)</div>
+            <div>Jump: ↑ W Space / D-pad ↑ / Left Stick ↑</div>
             <div>Pause: ESC P / Options (PS5) / Menu (Xbox)</div>
           </div>
           <div style={{ textAlign: 'center', flex: 1 }}>
