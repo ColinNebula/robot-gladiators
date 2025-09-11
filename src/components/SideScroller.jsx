@@ -3,26 +3,31 @@ import React, { useRef, useEffect, useState } from 'react';
 const PLAYER_SPEED = 5;
 const JUMP_POWER = 12;
 const GRAVITY = 0.7;
-const GROUND_Y = 320;
+const GROUND_Y = 420; // Updated for 500px height canvas
 const CHARACTER_WIDTH = 120; // Reduced from 200 for smaller collision boxes
 const CHARACTER_HEIGHT = 140; // Reduced from 200 for smaller collision boxes
 
-// Sprite animation configuration
+// Enhanced Sprite animation configuration
 const SPRITE_CONFIG = {
-  frameWidth: 48,
-  frameHeight: 48,
+  frameWidth: 48,  // Width of each frame in the spritesheet
+  frameHeight: 48, // Height of each frame in the spritesheet
+  renderScale: 2,  // Scale factor for rendering (makes sprites bigger)
   animations: {
-    idle: { frames: 4, speed: 8, file: 'Male_spritesheet_idle.png' },
-    run: { frames: 6, speed: 6, file: 'Male_spritesheet_run.png' },
-    jump: { frames: 3, speed: 4, file: 'Male_spritesheet_run_jump.png' },
-    punch1: { frames: 4, speed: 3, file: 'Male_spritesheet_punch_1.png' },
-    punch2: { frames: 4, speed: 3, file: 'Male_spritesheet_punch_2.png' },
-    falling: { frames: 2, speed: 8, file: 'Male_spritesheet_falling_idle.png' },
-    landing: { frames: 3, speed: 4, file: 'Male_spritesheet_falling_landing.png' }
+    idle: { frames: 4, speed: 12, file: 'Male_spritesheet_idle.png', loop: true },
+    run: { frames: 6, speed: 8, file: 'Male_spritesheet_run.png', loop: true },
+    jump: { frames: 3, speed: 6, file: 'Male_spritesheet_run_jump.png', loop: false },
+    punch1: { frames: 4, speed: 4, file: 'Male_spritesheet_punch_1.png', loop: false },
+    punch2: { frames: 4, speed: 4, file: 'Male_spritesheet_punch_2.png', loop: false },
+    punch3: { frames: 4, speed: 4, file: 'Male_spritesheet_punch_3.png', loop: false },
+    kick: { frames: 4, speed: 4, file: 'Male_spritesheet_kick_high.png', loop: false },
+    falling: { frames: 2, speed: 10, file: 'Male_spritesheet_falling_idle.png', loop: true },
+    landing: { frames: 3, speed: 6, file: 'Male_spritesheet_falling_landing.png', loop: false },
+    death: { frames: 4, speed: 8, file: 'Male_spritesheet_death_1.png', loop: false },
+    dodge: { frames: 3, speed: 5, file: 'Male_spritesheet_dodge_back.png', loop: false }
   }
 };
 
-// Sprite Animation Class
+// Enhanced Sprite Animation Class
 class SpriteAnimation {
   constructor(imagePath, config, onLoad) {
     this.image = new Image();
@@ -31,12 +36,16 @@ class SpriteAnimation {
     this.currentFrame = 0;
     this.frameCounter = 0;
     this.currentAnimation = 'idle';
+    this.previousAnimation = null;
+    this.animationComplete = false;
     this.loaded = false;
     this.onLoad = onLoad;
+    this.loadedImages = new Map(); // Cache for different animation images
     
     this.image.onload = () => {
       this.loaded = true;
-      console.log('Sprite loaded successfully:', imagePath);
+      this.loadedImages.set('idle', this.image);
+      console.log('Base sprite loaded successfully:', imagePath);
       if (this.onLoad) this.onLoad();
     };
     
@@ -47,80 +56,154 @@ class SpriteAnimation {
   
   setAnimation(animationName) {
     if (this.currentAnimation !== animationName) {
+      this.previousAnimation = this.currentAnimation;
       this.currentAnimation = animationName;
       this.currentFrame = 0;
       this.frameCounter = 0;
+      this.animationComplete = false;
+      
+      // Load the specific animation image if not already loaded
+      this.loadAnimationImage(animationName);
     }
+  }
+  
+  loadAnimationImage(animationName) {
+    const anim = this.config.animations[animationName];
+    if (!anim || this.loadedImages.has(animationName)) return;
+    
+    const fullPath = `/assets/sprites/SplitAnimations/${anim.file}`;
+    console.log(`🔄 Loading animation image: ${animationName} from ${fullPath}`);
+    
+    const img = new Image();
+    img.src = fullPath;
+    img.onload = () => {
+      this.loadedImages.set(animationName, img);
+      console.log(`✅ Animation image loaded successfully: ${animationName} (${img.naturalWidth}x${img.naturalHeight})`);
+    };
+    img.onerror = (error) => {
+      console.error(`❌ Failed to load animation: ${animationName} from ${fullPath}`, error);
+      console.error('Check if file exists at:', fullPath);
+    };
   }
   
   update() {
     if (!this.loaded) return;
     
     const anim = this.config.animations[this.currentAnimation];
-    if (!anim) return;
+    if (!anim || this.animationComplete) return;
     
     this.frameCounter++;
     if (this.frameCounter >= anim.speed) {
-      this.currentFrame = (this.currentFrame + 1) % anim.frames;
+      this.currentFrame++;
       this.frameCounter = 0;
+      
+      // Handle animation completion
+      if (this.currentFrame >= anim.frames) {
+        if (anim.loop) {
+          this.currentFrame = 0; // Loop back to start
+        } else {
+          this.currentFrame = anim.frames - 1; // Stay on last frame
+          this.animationComplete = true;
+          // Auto-return to idle for non-looping animations
+          setTimeout(() => {
+            if (!anim.loop && this.currentAnimation !== 'idle') {
+              this.setAnimation('idle');
+            }
+          }, 100);
+        }
+      }
     }
+  }
+  
+  isAnimationComplete() {
+    return this.animationComplete;
   }
   
   draw(ctx, x, y, flipX = false) {
-    console.log('=== SPRITE DRAW START ===');
-    console.log('Loaded:', this.loaded);
-    console.log('Image.src:', this.image.src);
-    console.log('Image.complete:', this.image.complete);
-    console.log('Image.naturalWidth:', this.image.naturalWidth);
-    console.log('Image.naturalHeight:', this.image.naturalHeight);
-    console.log('Position x:', x, 'y:', y);
+    const currentImage = this.loadedImages.get(this.currentAnimation) || this.image;
     
-    // Always try to draw the image if it exists, even if loaded flag is false
-    if (this.image.complete && this.image.naturalWidth > 0) {
-      console.log('Image is complete, attempting to draw...');
+    console.log(`🎨 Drawing sprite: animation=${this.currentAnimation}, frame=${this.currentFrame}`);
+    console.log(`Image available:`, !!currentImage, `Complete:`, currentImage?.complete, `Natural size:`, currentImage?.naturalWidth, 'x', currentImage?.naturalHeight);
+    console.log(`LoadedImages cache:`, Array.from(this.loadedImages.keys()));
+    
+    if (!currentImage || !currentImage.complete || currentImage.naturalWidth === 0) {
+      console.log(`⚠️ Using fallback for ${this.currentAnimation} - Image not ready`);
+      this.drawFallback(ctx, x, y);
+      return;
+    }
+    
+    const anim = this.config.animations[this.currentAnimation];
+    if (!anim) {
+      console.log(`⚠️ Using fallback for ${this.currentAnimation} - Animation config not found`);
+      this.drawFallback(ctx, x, y);
+      return;
+    }
+    
+    const frameWidth = this.config.frameWidth;
+    const frameHeight = this.config.frameHeight;
+    const scale = this.config.renderScale;
+    const renderWidth = frameWidth * scale;
+    const renderHeight = frameHeight * scale;
+    
+    // Calculate source coordinates for current frame
+    const sourceX = this.currentFrame * frameWidth;
+    const sourceY = 0; // Assuming horizontal sprite sheets
+    
+    console.log(`📐 Drawing frame: source(${sourceX}, ${sourceY}, ${frameWidth}, ${frameHeight}) -> dest(${x}, ${y - renderHeight}, ${renderWidth}, ${renderHeight})`);
+    
+    ctx.save();
+    
+    // Handle flipping
+    if (flipX) {
+      ctx.scale(-1, 1);
+      x = -x - renderWidth;
+    }
+    
+    try {
+      // Draw the specific frame from the spritesheet
+      ctx.drawImage(
+        currentImage,
+        sourceX, sourceY, frameWidth, frameHeight, // Source: specific frame
+        x, y - renderHeight, renderWidth, renderHeight // Destination: scaled frame
+      );
       
-      const spriteSize = 96;
+      console.log(`✅ Successfully drew sprite frame for ${this.currentAnimation}`);
       
-      ctx.save();
-      if (flipX) {
-        ctx.scale(-1, 1);
-        x = -x;
-      }
-      
-      try {
-        console.log('Drawing sprite at:', x - spriteSize/2, y - spriteSize, 'size:', spriteSize);
-        
-        // Draw debug rectangle to show where sprite should be
+      // Optional: Draw debug info
+      if (window.DEBUG_SPRITES) {
         ctx.strokeStyle = '#00ff00';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x - spriteSize/2, y - spriteSize, spriteSize, spriteSize);
-        
-        // Draw the entire image (not just first frame for now)
-        ctx.drawImage(
-          this.image,
-          0, 0, this.image.naturalWidth, this.image.naturalHeight, // Source: entire image
-          x - spriteSize/2, y - spriteSize, spriteSize, spriteSize // Destination
-        );
-        console.log('Successfully drew sprite');
-      } catch (error) {
-        console.error('Error drawing sprite:', error);
-        this.drawFallback(ctx, x, y);
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y - renderHeight, renderWidth, renderHeight);
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '12px Arial';
+        ctx.fillText(`${this.currentAnimation}:${this.currentFrame}`, x, y + 20);
       }
       
-      ctx.restore();
-    } else {
-      console.log('Image not ready - drawing emoji fallback');
+    } catch (error) {
+      console.error('❌ Error drawing sprite frame:', error);
+      console.error('Current image:', currentImage);
+      console.error('Draw parameters:', { sourceX, sourceY, frameWidth, frameHeight, x, y: y - renderHeight, renderWidth, renderHeight });
       this.drawFallback(ctx, x, y);
     }
     
-    console.log('=== SPRITE DRAW END ===');
+    ctx.restore();
   }
   
   drawFallback(ctx, x, y) {
-    ctx.font = '48px serif';
+    const scale = this.config.renderScale;
+    const size = this.config.frameWidth * scale;
+    
+    ctx.font = `${size * 0.8}px serif`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
-    ctx.fillText('🤖', x, y);
+    ctx.fillText('🤖', x + size/2, y - size/4);
+  }
+  
+  // Preload all animation images
+  preloadAnimations() {
+    Object.keys(this.config.animations).forEach(animName => {
+      this.loadAnimationImage(animName);
+    });
   }
 }
 
@@ -129,8 +212,14 @@ const SideScroller = ({ character }) => {
   const playerSpriteRef = useRef(null);
   const enemySpriteRef = useRef(null);
   
+  // Enable sprite debugging via console: window.DEBUG_SPRITES = true
+  useEffect(() => {
+    window.DEBUG_SPRITES = false; // Set to true for debugging
+    console.log('Sprite debugging can be enabled with: window.DEBUG_SPRITES = true');
+  }, []);
+  
   const playerRef = useRef({
-    x: 100,
+    x: 150, // Moved further from edge for wider screen
     y: GROUND_Y,
     vx: 0,
     vy: 0,
@@ -147,7 +236,7 @@ const SideScroller = ({ character }) => {
   });
   
   const enemyRef = useRef({
-    x: 700,
+    x: 1050, // Moved further to the right for wider screen (1200px canvas)
     y: GROUND_Y,
     vx: 0,
     vy: 0,
@@ -177,37 +266,56 @@ const SideScroller = ({ character }) => {
   const [gameTime, setGameTime] = useState(0);
   const [connectedGamepad, setConnectedGamepad] = useState({ type: null, name: null });
 
-  // Initialize sprites
+  // Enhanced Combat System State
+  const [activeKeys, setActiveKeys] = useState(new Set());
+  const [combatState, setCombatState] = useState({
+    leftPunchPressed: false,
+    rightPunchPressed: false,
+    leftKickPressed: false,
+    rightKickPressed: false,
+    comboWindow: 0, // Frames remaining for combo input
+    lastAttackType: null,
+    comboPower: 1.0
+  });
+
+  // Initialize enhanced sprite animations
   useEffect(() => {
-    console.log('Initializing sprites...');
+    console.log('Initializing enhanced sprite animations...');
     
-    // Simple image loading - no complex animation system
-    const playerImg = new Image();
-    playerImg.onload = () => {
-      console.log('Player image loaded:', playerImg.naturalWidth, 'x', playerImg.naturalHeight);
-      playerSpriteRef.current = { image: playerImg, loaded: true };
-    };
-    playerImg.onerror = (err) => {
-      console.error('Player image failed to load:', err);
-      playerSpriteRef.current = { image: null, loaded: false };
-    };
-    playerImg.src = '/assets/sprites/SplitAnimations/Male_spritesheet_idle.png';
+    // Create player sprite animation
+    playerSpriteRef.current = new SpriteAnimation(
+      '/assets/sprites/SplitAnimations/Male_spritesheet_idle.png',
+      SPRITE_CONFIG,
+      () => {
+        console.log('✅ Player sprite animation loaded successfully!');
+        setSpritesLoaded(prev => ({ ...prev, player: true }));
+      }
+    );
     
-    const enemyImg = new Image();
-    enemyImg.onload = () => {
-      console.log('Enemy image loaded:', enemyImg.naturalWidth, 'x', enemyImg.naturalHeight);
-      enemySpriteRef.current = { image: enemyImg, loaded: true };
-    };
-    enemyImg.onerror = (err) => {
-      console.error('Enemy image failed to load:', err);
-      enemySpriteRef.current = { image: null, loaded: false };
-    };
-    enemyImg.src = '/assets/sprites/SplitAnimations/Male_spritesheet_idle.png';
+    // Create enemy sprite animation  
+    enemySpriteRef.current = new SpriteAnimation(
+      '/assets/sprites/SplitAnimations/Male_spritesheet_idle.png',
+      SPRITE_CONFIG,
+      () => {
+        console.log('✅ Enemy sprite animation loaded successfully!');
+        setSpritesLoaded(prev => ({ ...prev, enemy: true }));
+      }
+    );
     
-    console.log('Sprite refs created:', {
-      player: !!playerSpriteRef.current,
-      enemy: !!enemySpriteRef.current
+    // Preload all animations
+    console.log('Preloading all animations...');
+    playerSpriteRef.current.preloadAnimations();
+    enemySpriteRef.current.preloadAnimations();
+    
+    // Add debugging to check what images are being requested
+    console.log('Sprite paths being loaded:');
+    console.log('- Base path:', '/assets/sprites/SplitAnimations/Male_spritesheet_idle.png');
+    Object.keys(SPRITE_CONFIG.animations).forEach(animName => {
+      const animConfig = SPRITE_CONFIG.animations[animName];
+      console.log(`- ${animName}:`, `/assets/sprites/SplitAnimations/${animConfig.file}`);
     });
+    
+    console.log('Enhanced sprite animations initialized');
   }, []);
 
   useEffect(() => {
@@ -257,72 +365,14 @@ const SideScroller = ({ character }) => {
       ctx.fill();
       ctx.shadowBlur = 0;
       
-      // Update and draw player sprite - SIMPLIFIED
-      console.log('Drawing player - sprite loaded:', !!playerSpriteRef.current?.loaded);
-      if (playerSpriteRef.current?.loaded && playerSpriteRef.current.image) {
-        const spriteSize = 200; // Much larger size
-        const img = playerSpriteRef.current.image;
-        
-        console.log('Player sprite details:');
-        console.log('- Image complete:', img.complete);
-        console.log('- Image naturalWidth:', img.naturalWidth);
-        console.log('- Image naturalHeight:', img.naturalHeight);
-        console.log('- Image src:', img.src);
-        console.log('- Canvas context:', !!ctx);
-        console.log('- Player position:', playerRef.current.x, playerRef.current.y);
-        console.log('- Sprite size:', spriteSize);
-        console.log('- Draw position will be:', playerRef.current.x - spriteSize/2, playerRef.current.y - spriteSize);
-        
-        try {
-          console.log('Drawing player sprite at:', playerRef.current.x, playerRef.current.y);
-          
-          // Draw green debug rectangle
-          ctx.strokeStyle = '#00ff00';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(playerRef.current.x - spriteSize/2, playerRef.current.y - spriteSize, spriteSize, spriteSize);
-          console.log('Debug rectangle drawn successfully');
-          
-          // Test if we can draw the image at all - try drawing it smaller first
-          console.log('Attempting to draw image...');
-          
-          // Calculate frame size for 18-frame sprite sheet (6x3 grid)
-          const framesPerRow = 6;
-          const framesPerColumn = 3;
-          const frameWidth = img.naturalWidth / framesPerRow; 
-          const frameHeight = img.naturalHeight / framesPerColumn;
-          
-          // Get current frame based on animation - limit to first frame for now
-          let currentFrame = 0; // Always use first frame
-          const animSpeed = 10; // Frames between animation changes
-          
-          // For now, just show the first frame (top-left)
-          // Later we can add proper animation cycling
-          
-          // Calculate source position for first frame only
-          const frameX = 0; // Always first column
-          const frameY = 0; // Always first row
-          
-          console.log('Player sprite animation:');
-          console.log('- Animation:', playerRef.current.currentAnimation);
-          console.log('- Using frame 0 (first frame)');
-          console.log('- Frame size:', frameWidth, 'x', frameHeight);
-          console.log('- Frame position:', frameX, frameY);
-          
-          // Draw only the first frame
-          ctx.drawImage(
-            img,
-            frameX, frameY, frameWidth, frameHeight, // Source: first frame only
-            playerRef.current.x - spriteSize/2, playerRef.current.y - spriteSize, // Position
-            spriteSize, spriteSize // Size (200x200)
-          );
-          console.log('Drew first frame from 4x1 layout');
-          
-        } catch (error) {
-          console.error('Error drawing player sprite:', error);
-          console.error('Error stack:', error.stack);
-        }
+      // Draw player using enhanced sprite animation
+      console.log('Drawing player with enhanced sprite system');
+      if (playerSpriteRef.current && spritesLoaded.player) {
+        console.log('Player sprite available, current animation:', playerSpriteRef.current.currentAnimation);
+        const flipX = playerRef.current.facing === 'left';
+        playerSpriteRef.current.draw(ctx, playerRef.current.x, playerRef.current.y, flipX);
       } else {
-        console.log('Player sprite not loaded - drawing emoji');
+        console.log('Player sprite not ready, using fallback. Loaded:', spritesLoaded.player);
         // Fallback emoji
         ctx.font = '96px serif';
         ctx.textAlign = 'center';
@@ -330,56 +380,14 @@ const SideScroller = ({ character }) => {
         ctx.fillText(playerRef.current.avatar, playerRef.current.x, playerRef.current.y);
       }
       
-      // Update and draw enemy sprite - FULL SPRITE SHEET
-      if (enemySpriteRef.current?.loaded && enemySpriteRef.current.image) {
-        const spriteSize = 200; // Much larger size
-        
-        try {
-          console.log('Drawing enemy sprite sheet - size:', enemySpriteRef.current.image.naturalWidth, 'x', enemySpriteRef.current.image.naturalHeight);
-          
-          // Draw red debug rectangle
-          ctx.strokeStyle = '#ff0000';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(enemyRef.current.x - spriteSize/2, enemyRef.current.y - spriteSize, spriteSize, spriteSize);
-          
-          // Calculate frame size for 18-frame sprite sheet (6x3 grid)
-          const framesPerRow = 6;
-          const framesPerColumn = 3;
-          const frameWidth = enemySpriteRef.current.image.naturalWidth / framesPerRow;
-          const frameHeight = enemySpriteRef.current.image.naturalHeight / framesPerColumn;
-          
-          // Get current frame based on animation - limit to first frame for now
-          let currentFrame = 0; // Always use first frame
-          const animSpeed = 12; // Slightly different speed for enemy
-          
-          // For now, just show the first frame (top-left)
-          // Later we can add proper animation cycling
-          
-          // Calculate source position for first frame only
-          const frameX = 0; // Always first column
-          const frameY = 0; // Always first row
-          
-          console.log('Enemy sprite animation:');
-          console.log('- Animation:', enemyRef.current.currentAnimation);
-          console.log('- Using frame 0 (first frame)');
-          console.log('- Frame size:', frameWidth, 'x', frameHeight);
-          
-          // Draw only the first frame (flipped for enemy)
-          ctx.save();
-          ctx.scale(-1, 1);
-          ctx.drawImage(
-            enemySpriteRef.current.image,
-            frameX, frameY, frameWidth, frameHeight, // Source: first frame only
-            -enemyRef.current.x - spriteSize/2, enemyRef.current.y - spriteSize, // Position (flipped)
-            spriteSize, spriteSize // Size (200x200)
-          );
-          ctx.restore();
-          console.log('Drew enemy first frame from 4x1 layout');
-        } catch (error) {
-          console.error('Error drawing enemy sprite:', error);
-        }
+      // Draw enemy using enhanced sprite animation
+      console.log('Drawing enemy with enhanced sprite system');
+      if (enemySpriteRef.current && spritesLoaded.enemy) {
+        console.log('Enemy sprite available, current animation:', enemySpriteRef.current.currentAnimation);
+        const flipX = enemyRef.current.facing === 'left';
+        enemySpriteRef.current.draw(ctx, enemyRef.current.x, enemyRef.current.y, flipX);
       } else {
-        console.log('Enemy sprite not loaded - drawing emoji');
+        console.log('Enemy sprite not ready, using fallback. Loaded:', spritesLoaded.enemy);
         // Fallback emoji
         ctx.font = '96px serif';
         ctx.textAlign = 'center';
@@ -518,82 +526,18 @@ const SideScroller = ({ character }) => {
         ctx.strokeRect(enemyRef.current.x - CHARACTER_WIDTH/2, enemyRef.current.y - CHARACTER_HEIGHT, CHARACTER_WIDTH, CHARACTER_HEIGHT);
       }
       
-      // Draw and update particles - ENHANCED PARTICLE SYSTEM
-      setParticles(prevParticles => {
-        const updatedParticles = prevParticles.map(particle => {
-          let newParticle = { ...particle };
-          
-          // Update based on particle type
-          if (particle.type === 'explosion') {
-            newParticle.x += particle.vx;
-            newParticle.y += particle.vy;
-            newParticle.vx *= 0.96; // Slow down over time
-            newParticle.vy *= 0.96;
-            newParticle.vy += 0.05; // Light gravity
-            newParticle.rotation += particle.rotationSpeed;
-            newParticle.life -= 1;
-          } else if (particle.type === 'spark') {
-            // Update trail
-            newParticle.trail = [...(particle.trail || []), { x: particle.x, y: particle.y }];
-            if (newParticle.trail.length > particle.trailLength) {
-              newParticle.trail.shift();
-            }
-            
-            newParticle.x += particle.vx;
-            newParticle.y += particle.vy;
-            newParticle.vx *= 0.92; // Fast deceleration
-            newParticle.vy *= 0.92;
-            newParticle.life -= 1;
-          } else if (particle.type === 'shockwave') {
-            newParticle.size += particle.expansion;
-            newParticle.life -= 1;
-          } else if (particle.type === 'debris') {
-            newParticle.x += particle.vx;
-            newParticle.y += particle.vy;
-            newParticle.vx *= 0.98; // Air resistance
-            newParticle.vy += 0.15; // Stronger gravity for debris
-            
-            // Bounce off ground
-            if (newParticle.y > GROUND_Y - 10) {
-              newParticle.y = GROUND_Y - 10;
-              newParticle.vy *= -particle.bounce;
-              newParticle.vx *= 0.8; // Friction on bounce
-            }
-            
-            newParticle.life -= 1;
-          } else {
-            // Normal particle physics
-            newParticle.x += particle.vx;
-            newParticle.y += particle.vy;
-            newParticle.vy += 0.08; // Light gravity
-            newParticle.vx *= 0.99; // Air resistance
-            newParticle.life -= 1;
-          }
-          
-          return newParticle;
-        }).filter(particle => particle.life > 0);
-        
-        // AUTO TEST: Disabled to reduce particle spam
-        // if (Math.floor(gameTime / 180) !== Math.floor((gameTime - 1) / 180)) { // Every 3 seconds (180 frames)
-        //   console.log('=== AUTO PARTICLE TEST ===');
-        //   createParticles(400, 200, '#ffff00', 8, 'explosion');
-        //   createParticles(400, 200, '#ffffff', 6, 'spark');
-        //   createParticles(400, 200, '#ff8800', 2, 'shockwave');
-        //   createParticles(450, 200, '#ff0000', 5, 'debris');
-        //   console.log('Auto-created test particles at center of screen');
-        // }
-        
-        // Enhanced particle rendering with better visibility
+      // Render particles - ENHANCED PARTICLE SYSTEM
+      if (particles.length > 0) {
         ctx.save(); // Save context state
         
-        updatedParticles.forEach((particle, index) => {
+        particles.forEach((particle, index) => {
           const alpha = Math.max(0.4, particle.life / particle.maxLife); // Higher minimum alpha
           
           if (particle.type === 'explosion') {
             // Explosive particles with glow and rotation
             ctx.save();
             ctx.translate(particle.x, particle.y);
-            ctx.rotate(particle.rotation);
+            ctx.rotate(particle.rotation || 0);
             
             // Outer glow
             ctx.shadowColor = particle.color;
@@ -725,18 +669,16 @@ const SideScroller = ({ character }) => {
         ctx.restore(); // Restore context state
         
         // Debug info with more details
-        if (updatedParticles.length > 0) {
-          const explosionCount = updatedParticles.filter(p => p.type === 'explosion').length;
-          const sparkCount = updatedParticles.filter(p => p.type === 'spark').length;
-          const shockwaveCount = updatedParticles.filter(p => p.type === 'shockwave').length;
-          const debrisCount = updatedParticles.filter(p => p.type === 'debris').length;
-          const normalCount = updatedParticles.filter(p => p.type === 'normal').length;
+        if (particles.length > 0) {
+          const explosionCount = particles.filter(p => p.type === 'explosion').length;
+          const sparkCount = particles.filter(p => p.type === 'spark').length;
+          const shockwaveCount = particles.filter(p => p.type === 'shockwave').length;
+          const debrisCount = particles.filter(p => p.type === 'debris').length;
+          const normalCount = particles.filter(p => p.type === 'normal').length;
           
-          console.log(`Rendering ${updatedParticles.length} particles: ${explosionCount} explosion, ${sparkCount} spark, ${shockwaveCount} shockwave, ${debrisCount} debris, ${normalCount} normal`);
+          console.log(`Rendering ${particles.length} particles: ${explosionCount} explosion, ${sparkCount} spark, ${shockwaveCount} shockwave, ${debrisCount} debris, ${normalCount} normal`);
         }
-        
-        return updatedParticles;
-      });
+      }
     }
 
     function createParticles(x, y, color, count = 10, type = 'normal') {
@@ -904,6 +846,184 @@ const SideScroller = ({ character }) => {
              rect1.y + rect1.height > rect2.y;
     }
 
+    // Enhanced Combat System Functions
+    function performCombatAttack(attackType, comboPower = 1.0) {
+      console.log(`=== ENHANCED COMBAT: ${attackType.toUpperCase()} ===`);
+      console.log(`Combo Power: ${comboPower}x`);
+      
+      if (playerRef.current.isAttacking || playerRef.current.attackCooldown > 0) {
+        console.log('Attack blocked - player still in attack state');
+        return;
+      }
+
+      playerRef.current.isAttacking = true;
+      playerRef.current.attackCooldown = Math.floor(30 / comboPower); // Faster cooldown for combos
+      
+      // Set animation based on attack type
+      const animations = {
+        'left-punch': 'punch1',
+        'right-punch': 'punch2', 
+        'left-kick': 'kick',
+        'right-kick': 'kick',
+        'double-punch': 'punch3',
+        'double-kick': 'punch_quad' // Using existing quad animation for double kick
+      };
+      
+      playerRef.current.currentAnimation = animations[attackType] || 'punch1';
+      
+      // Check if attack hits enemy
+      const distance = Math.abs(playerRef.current.x - enemyRef.current.x);
+      console.log('Attack distance:', distance, 'Required distance:', CHARACTER_WIDTH + 20);
+      
+      if (distance < CHARACTER_WIDTH + 20) {
+        console.log('ENHANCED ATTACK HIT!');
+        
+        // Calculate damage based on attack type and combo power
+        let baseDamage = playerRef.current.attack;
+        let damageMultiplier = 1.0;
+        
+        switch(attackType) {
+          case 'left-punch':
+          case 'right-punch':
+            damageMultiplier = 1.0;
+            break;
+          case 'left-kick':
+          case 'right-kick':
+            damageMultiplier = 1.2; // Kicks are stronger
+            break;
+          case 'double-punch':
+            damageMultiplier = 1.8; // Strong combo
+            break;
+          case 'double-kick':
+            damageMultiplier = 2.2; // Strongest combo
+            break;
+        }
+        
+        let totalDamage = Math.floor(baseDamage * damageMultiplier * comboPower);
+        
+        // Apply existing combo system bonus
+        if (combo.player > 0) {
+          totalDamage += Math.floor(combo.player * 2);
+          setCombo(prev => ({ ...prev, player: prev.player + 1, timer: 180 }));
+        } else {
+          setCombo(prev => ({ ...prev, player: 1, timer: 180 }));
+        }
+        
+        console.log(`Total damage: ${totalDamage} (base: ${baseDamage}, multiplier: ${damageMultiplier}, combo: ${comboPower})`);
+        
+        enemyRef.current.health = Math.max(0, enemyRef.current.health - totalDamage);
+        
+        // Build special meter (more for stronger attacks)
+        const meterGain = Math.floor(15 * damageMultiplier);
+        setSpecialMeter(prev => ({ ...prev, player: Math.min(100, prev.player + meterGain) }));
+        
+        // Enhanced particle effects for different attack types
+        const particleColors = {
+          'left-punch': '#ff6b6b',
+          'right-punch': '#4facfe', 
+          'left-kick': '#ffa502',
+          'right-kick': '#2ed573',
+          'double-punch': '#ffd700',
+          'double-kick': '#e056fd'
+        };
+        
+        const particleCount = Math.floor(3 + (damageMultiplier * 2));
+        createParticles(enemyRef.current.x, enemyRef.current.y - 50, particleColors[attackType] || '#ff0000', particleCount, 'explosion');
+        createParticles(enemyRef.current.x, enemyRef.current.y - 50, '#ffffff', Math.floor(particleCount * 0.7), 'spark');
+        
+        // Enhanced screen shake for stronger attacks
+        const shakeIntensity = Math.floor(8 * damageMultiplier);
+        setScreenShake({ active: true, intensity: shakeIntensity, timer: 20 });
+        
+        // Trigger collision animation
+        const collisionX = (playerRef.current.x + enemyRef.current.x) / 2;
+        const collisionY = Math.min(playerRef.current.y, enemyRef.current.y) - 20;
+        triggerCollisionAnimation(collisionX, collisionY);
+        
+        // Display damage number (visual feedback)
+        console.log(`💥 ${attackType}: ${totalDamage} damage dealt!`);
+        
+      } else {
+        console.log('ENHANCED ATTACK MISSED - too far away');
+      }
+    }
+
+    function updateParticles() {
+      setParticles(prevParticles => {
+        const updatedParticles = prevParticles.map(particle => {
+          let newParticle = { ...particle };
+          
+          // Update based on particle type
+          if (particle.type === 'explosion') {
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vx *= 0.96; // Slow down over time
+            newParticle.vy *= 0.96;
+            newParticle.vy += 0.05; // Light gravity
+            newParticle.rotation += particle.rotationSpeed;
+            newParticle.life -= 1;
+          } else if (particle.type === 'spark') {
+            // Update trail
+            newParticle.trail = [...(particle.trail || []), { x: particle.x, y: particle.y }];
+            if (newParticle.trail.length > particle.trailLength) {
+              newParticle.trail.shift();
+            }
+            
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vx *= 0.92; // Fast deceleration
+            newParticle.vy *= 0.92;
+            newParticle.life -= 1;
+          } else if (particle.type === 'shockwave') {
+            newParticle.size += particle.expansion;
+            newParticle.life -= 1;
+          } else if (particle.type === 'debris') {
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vx *= 0.98; // Air resistance
+            newParticle.vy += 0.15; // Stronger gravity for debris
+            
+            // Bounce off ground
+            if (newParticle.y > GROUND_Y - 10) {
+              newParticle.y = GROUND_Y - 10;
+              newParticle.vy *= -particle.bounce;
+              newParticle.vx *= 0.8; // Friction on bounce
+            }
+            
+            newParticle.life -= 1;
+          } else {
+            // Normal particle physics
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += 0.08; // Light gravity
+            newParticle.vx *= 0.99; // Air resistance
+            newParticle.life -= 1;
+          }
+          
+          return newParticle;
+        }).filter(particle => particle.life > 0);
+        
+        return updatedParticles;
+      });
+    }
+
+    function updateCombatSystem() {
+      // Update combo window timer
+      if (combatState.comboWindow > 0) {
+        setCombatState(prev => ({ ...prev, comboWindow: prev.comboWindow - 1 }));
+      } else {
+        // Reset combat state when combo window expires
+        setCombatState(prev => ({
+          ...prev,
+          leftPunchPressed: false,
+          rightPunchPressed: false,
+          leftKickPressed: false,
+          rightKickPressed: false,
+          comboPower: 1.0
+        }));
+      }
+    }
+
     function update() {
       // Check for game over conditions first
       if (playerRef.current.health <= 0 && !gameOver.active) {
@@ -926,6 +1046,45 @@ const SideScroller = ({ character }) => {
       
       // Don't update game if game is over
       if (gameOver.active) return;
+      
+      // Update enhanced combat system
+      updateCombatSystem();
+      
+      // Update particles
+      updateParticles();
+      
+      // Update sprite animations
+      if (playerSpriteRef.current) {
+        // Set player animation based on state
+        if (playerRef.current.isAttacking) {
+          const attacks = ['punch1', 'punch2', 'punch3'];
+          const attackAnim = attacks[Math.floor(Math.random() * attacks.length)];
+          playerSpriteRef.current.setAnimation(attackAnim);
+        } else if (!playerRef.current.onGround) {
+          if (playerRef.current.vy < 0) {
+            playerSpriteRef.current.setAnimation('jump');
+          } else {
+            playerSpriteRef.current.setAnimation('falling');
+          }
+        } else if (Math.abs(playerRef.current.vx) > 0.1) {
+          playerSpriteRef.current.setAnimation('run');
+        } else {
+          playerSpriteRef.current.setAnimation('idle');
+        }
+        playerSpriteRef.current.update();
+      }
+      
+      if (enemySpriteRef.current) {
+        // Set enemy animation based on state  
+        if (enemyRef.current.isAttacking) {
+          enemySpriteRef.current.setAnimation('punch1');
+        } else if (Math.abs(enemyRef.current.vx) > 0.1) {
+          enemySpriteRef.current.setAnimation('run');
+        } else {
+          enemySpriteRef.current.setAnimation('idle');
+        }
+        enemySpriteRef.current.update();
+      }
       
       // Update game timer
       setGameTime(prev => prev + 1);
@@ -1175,52 +1334,96 @@ const SideScroller = ({ character }) => {
       } else if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') && playerRef.current.onGround) {
         playerRef.current.vy = -JUMP_POWER;
         playerRef.current.onGround = false;
-      } else if ((e.key === 'x' || e.key === 'X') && !playerRef.current.isAttacking && playerRef.current.attackCooldown === 0) {
-        // Attack
-        console.log('=== PLAYER ATTACK ===');
-        console.log('Player position:', playerRef.current.x);
-        console.log('Enemy position:', enemyRef.current.x);
-        console.log('Player attack power:', playerRef.current.attack);
-        console.log('Enemy health before:', enemyRef.current.health);
-        
-        playerRef.current.isAttacking = true;
-        playerRef.current.currentAnimation = Math.random() < 0.5 ? 'punch1' : 'punch2';
-        playerRef.current.attackCooldown = 30;
-        
-        // Check if attack hits enemy
-        const distance = Math.abs(playerRef.current.x - enemyRef.current.x);
-        console.log('Attack distance:', distance, 'Required distance:', CHARACTER_WIDTH + 20);
-        
-        if (distance < CHARACTER_WIDTH + 20) {
-          console.log('ATTACK HIT! Dealing', playerRef.current.attack, 'damage');
-          // Deal damage
-          let damage = playerRef.current.attack;
+      
+      // Enhanced Combat Controls
+      } else if (e.key === 'q' || e.key === 'Q') {
+        // Left Punch
+        if (!combatState.leftPunchPressed) {
+          setCombatState(prev => ({ ...prev, leftPunchPressed: true, comboWindow: 30 }));
           
-          // Combo damage bonus
-          if (combo.player > 0) {
-            damage += Math.floor(combo.player * 2);
-            setCombo(prev => ({ ...prev, player: prev.player + 1, timer: 180 }));
+          // Check for double punch combo
+          if (combatState.rightPunchPressed && combatState.comboWindow > 0) {
+            console.log('🥊 DOUBLE PUNCH COMBO!');
+            performCombatAttack('double-punch', 1.5);
+            setCombatState(prev => ({ 
+              ...prev, 
+              leftPunchPressed: false, 
+              rightPunchPressed: false,
+              comboWindow: 0,
+              comboPower: 1.5
+            }));
           } else {
-            setCombo(prev => ({ ...prev, player: 1, timer: 180 }));
+            performCombatAttack('left-punch');
           }
-          
-          enemyRef.current.health = Math.max(0, enemyRef.current.health - damage);
-          console.log('Enemy health after:', enemyRef.current.health);
-          
-          // Build special meter
-          setSpecialMeter(prev => ({ ...prev, player: Math.min(100, prev.player + 15) }));
-          
-          // Create damage particles (reduced)
-          createParticles(enemyRef.current.x, enemyRef.current.y - 50, '#ff0000', 4, 'explosion');
-          createParticles(enemyRef.current.x, enemyRef.current.y - 50, '#ffffff', 3, 'spark');
-          
-          // Trigger collision animation for attack hit
-          const collisionX = (playerRef.current.x + enemyRef.current.x) / 2;
-          const collisionY = Math.min(playerRef.current.y, enemyRef.current.y) - 20;
-          triggerCollisionAnimation(collisionX, collisionY);
-        } else {
-          console.log('ATTACK MISSED - too far away');
         }
+      
+      } else if (e.key === 'e' || e.key === 'E') {
+        // Right Punch
+        if (!combatState.rightPunchPressed) {
+          setCombatState(prev => ({ ...prev, rightPunchPressed: true, comboWindow: 30 }));
+          
+          // Check for double punch combo
+          if (combatState.leftPunchPressed && combatState.comboWindow > 0) {
+            console.log('🥊 DOUBLE PUNCH COMBO!');
+            performCombatAttack('double-punch', 1.5);
+            setCombatState(prev => ({ 
+              ...prev, 
+              leftPunchPressed: false, 
+              rightPunchPressed: false,
+              comboWindow: 0,
+              comboPower: 1.5
+            }));
+          } else {
+            performCombatAttack('right-punch');
+          }
+        }
+      
+      } else if (e.key === 'f' || e.key === 'F') {
+        // Left Kick
+        if (!combatState.leftKickPressed) {
+          setCombatState(prev => ({ ...prev, leftKickPressed: true, comboWindow: 30 }));
+          
+          // Check for double kick combo
+          if (combatState.rightKickPressed && combatState.comboWindow > 0) {
+            console.log('🦵 DOUBLE KICK COMBO!');
+            performCombatAttack('double-kick', 2.0);
+            setCombatState(prev => ({ 
+              ...prev, 
+              leftKickPressed: false, 
+              rightKickPressed: false,
+              comboWindow: 0,
+              comboPower: 2.0
+            }));
+          } else {
+            performCombatAttack('left-kick');
+          }
+        }
+      
+      } else if (e.key === 'g' || e.key === 'G') {
+        // Right Kick
+        if (!combatState.rightKickPressed) {
+          setCombatState(prev => ({ ...prev, rightKickPressed: true, comboWindow: 30 }));
+          
+          // Check for double kick combo
+          if (combatState.leftKickPressed && combatState.comboWindow > 0) {
+            console.log('🦵 DOUBLE KICK COMBO!');
+            performCombatAttack('double-kick', 2.0);
+            setCombatState(prev => ({ 
+              ...prev, 
+              leftKickPressed: false, 
+              rightKickPressed: false,
+              comboWindow: 0,
+              comboPower: 2.0
+            }));
+          } else {
+            performCombatAttack('right-kick');
+          }
+        }
+      
+      // Legacy single attack (X key for backwards compatibility)
+      } else if (e.key === 'x' || e.key === 'X') {
+        performCombatAttack('right-punch');
+        
       } else if ((e.key === 'z' || e.key === 'Z') && specialMeter.player >= 100 && !playerRef.current.isAttacking) {
         // Special Move
         console.log('=== SPECIAL MOVE ===');
@@ -1311,22 +1514,31 @@ const SideScroller = ({ character }) => {
         // PS5 DualSense specific mappings
         const buttonMap = {
           PS5: {
-            jump: [0, 1], // X (Cross) and Circle
-            attack: [2, 3], // Square and Triangle
+            jump: [1], // Circle - changed to only circle for jump
+            leftPunch: [2], // Square 🔲
+            rightPunch: [3], // Triangle 🔺  
+            leftKick: [0], // X/Cross ❌
+            rightKick: [1], // Circle ⭕ - also used for right kick
             special: [4, 5], // L1 and R1
             pause: [9], // Options button
             heavy: [6, 7] // L2 and R2 triggers
           },
           Xbox: {
-            jump: [0, 1], // A and B
-            attack: [2, 3], // X and Y
+            jump: [1], // B button
+            leftPunch: [2], // X button
+            rightPunch: [3], // Y button
+            leftKick: [0], // A button  
+            rightKick: [1], // B button - also used for right kick
             special: [4, 5], // LB and RB
             pause: [7], // Menu button
             heavy: [6, 7] // LT and RT triggers
           },
           Generic: {
-            jump: [0, 1], // Button 0 and 1
-            attack: [2, 3], // Button 2 and 3
+            jump: [1], // Button 1
+            leftPunch: [2], // Button 2
+            rightPunch: [3], // Button 3
+            leftKick: [0], // Button 0
+            rightKick: [1], // Button 1 - also used for right kick
             special: [4, 5], // Button 4 and 5
             pause: [8, 9], // Button 8 and 9
             heavy: [6, 7] // Button 6 and 7
@@ -1375,56 +1587,55 @@ const SideScroller = ({ character }) => {
           console.log(`${gamepadType} controller: Jump activated`);
         }
         
-        // Attack (multiple button support with enhanced feedback)
-        const attackPressed = controls.attack.some(btn => gp.buttons[btn]?.pressed);
-        const lastAttackPressed = controls.attack.some(btn => lastGamepadState.buttons[btn]);
+        // Enhanced Combat Controls (PS4/PS5 Controller Mapping)
+        let newActiveKeys = { ...activeKeys };
         
-        if (attackPressed && !lastAttackPressed && !playerRef.current.isAttacking && playerRef.current.attackCooldown === 0) {
-          console.log(`${gamepadType} controller: Attack activated`);
-          playerRef.current.isAttacking = true;
-          playerRef.current.currentAnimation = Math.random() < 0.5 ? 'punch1' : 'punch2';
-          playerRef.current.attackCooldown = 30;
-          
-          // Check if attack hits enemy
-          const distance = Math.abs(playerRef.current.x - enemyRef.current.x);
-          if (distance < CHARACTER_WIDTH + 20) {
-            let damage = playerRef.current.attack;
-            
-            // Combo damage bonus
-            if (combo.player > 0) {
-              damage += Math.floor(combo.player * 2);
-              setCombo(prev => ({ ...prev, player: prev.player + 1, timer: 180 }));
-            } else {
-              setCombo(prev => ({ ...prev, player: 1, timer: 180 }));
-            }
-            
-            enemyRef.current.health = Math.max(0, enemyRef.current.health - damage);
-            
-            // Build special meter
-            setSpecialMeter(prev => ({ ...prev, player: Math.min(100, prev.player + 15) }));
-            
-            // Create damage particles
-            createParticles(enemyRef.current.x, enemyRef.current.y - 50, '#ff0000', 4, 'explosion');
-            createParticles(enemyRef.current.x, enemyRef.current.y - 50, '#ffffff', 3, 'spark');
-            
-            // Trigger collision animation
-            const collisionX = (playerRef.current.x + enemyRef.current.x) / 2;
-            const collisionY = Math.min(playerRef.current.y, enemyRef.current.y) - 20;
-            triggerCollisionAnimation(collisionX, collisionY);
-            
-            // PS5 Haptic feedback simulation (if supported)
-            if (gamepadType === 'PS5' && gp.vibrationActuator) {
-              gp.vibrationActuator.playEffect('dual-rumble', {
-                duration: 200,
-                strongMagnitude: 0.8,
-                weakMagnitude: 0.4
-              }).catch(() => {
-                console.log('Haptic feedback not supported');
-              });
-            }
-          }
+        // Left Punch - Square 🔲
+        const leftPunchPressed = controls.leftPunch?.some(btn => gp.buttons[btn]?.pressed);
+        const lastLeftPunchPressed = controls.leftPunch?.some(btn => lastGamepadState.buttons[btn]);
+        if (leftPunchPressed && !lastLeftPunchPressed) {
+          performCombatAttack('leftPunch');
+          newActiveKeys.q = true;
+          console.log(`${gamepadType} controller: Left Punch (Square) activated`);
+        } else if (!leftPunchPressed) {
+          newActiveKeys.q = false;
         }
-        
+
+        // Right Punch - Triangle 🔺
+        const rightPunchPressed = controls.rightPunch?.some(btn => gp.buttons[btn]?.pressed);
+        const lastRightPunchPressed = controls.rightPunch?.some(btn => lastGamepadState.buttons[btn]);
+        if (rightPunchPressed && !lastRightPunchPressed) {
+          performCombatAttack('rightPunch');
+          newActiveKeys.e = true;
+          console.log(`${gamepadType} controller: Right Punch (Triangle) activated`);
+        } else if (!rightPunchPressed) {
+          newActiveKeys.e = false;
+        }
+
+        // Left Kick - X/Cross ❌
+        const leftKickPressed = controls.leftKick?.some(btn => gp.buttons[btn]?.pressed);
+        const lastLeftKickPressed = controls.leftKick?.some(btn => lastGamepadState.buttons[btn]);
+        if (leftKickPressed && !lastLeftKickPressed) {
+          performCombatAttack('leftKick');
+          newActiveKeys.f = true;
+          console.log(`${gamepadType} controller: Left Kick (X/Cross) activated`);
+        } else if (!leftKickPressed) {
+          newActiveKeys.f = false;
+        }
+
+        // Right Kick - Circle ⭕ (Note: Circle is also used for jump, but different timing)
+        const rightKickPressed = controls.rightKick?.some(btn => gp.buttons[btn]?.pressed);
+        const lastRightKickPressed = controls.rightKick?.some(btn => lastGamepadState.buttons[btn]);
+        if (rightKickPressed && !lastRightKickPressed && !jumpPressed) { // Prevent conflict with jump
+          performCombatAttack('rightKick');
+          newActiveKeys.g = true;
+          console.log(`${gamepadType} controller: Right Kick (Circle) activated`);
+        } else if (!rightKickPressed) {
+          newActiveKeys.g = false;
+        }
+
+        setActiveKeys(newActiveKeys);
+
         // Special Move (shoulder buttons)
         const specialPressed = controls.special.some(btn => gp.buttons[btn]?.pressed);
         const lastSpecialPressed = controls.special.some(btn => lastGamepadState.buttons[btn]);
@@ -1549,7 +1760,7 @@ const SideScroller = ({ character }) => {
 
   return (
     <div style={{ textAlign: 'center', marginTop: '2rem', position: 'relative' }}>
-      <canvas ref={canvasRef} width={800} height={400} style={{ background: 'linear-gradient(180deg, #1a1a3a 60%, #222 100%)', borderRadius: '12px', boxShadow: '0 2px 16px #0008' }} />
+      <canvas ref={canvasRef} width={1200} height={500} style={{ background: 'linear-gradient(180deg, #1a1a3a 60%, #222 100%)', borderRadius: '12px', boxShadow: '0 2px 16px #0008', maxWidth: '100%' }} />
       
       {/* Pause Overlay */}
       {isPaused && !gameOver.active && (
@@ -1628,8 +1839,8 @@ const SideScroller = ({ character }) => {
                 // Reset game state
                 playerRef.current.health = playerRef.current.maxHealth;
                 enemyRef.current.health = enemyRef.current.maxHealth;
-                playerRef.current.x = 100;
-                enemyRef.current.x = 700;
+                playerRef.current.x = 150;
+                enemyRef.current.x = 1050;
                 playerRef.current.y = GROUND_Y;
                 enemyRef.current.y = GROUND_Y;
                 playerRef.current.vx = 0;
@@ -1685,22 +1896,28 @@ const SideScroller = ({ character }) => {
       )}
       
       <div style={{ marginTop: '1rem', color: '#fff', lineHeight: '1.6' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'left' }}>
-            <div><strong>🎮 Controls:</strong></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', maxWidth: '1200px', margin: '0 auto', gap: '2rem' }}>
+          <div style={{ textAlign: 'left', flex: 1 }}>
+            <div><strong>🎮 Basic Controls:</strong></div>
             <div>Move: ← → / A D / Left Stick</div>
-            <div>Jump: ↑ W Space / ❌ ⭕ (PS5) / A B (Xbox)</div>
-            <div>Attack: X / 🔲 🔺 (PS5) / X Y (Xbox)</div>
-            <div>Heavy: L2 R2 (PS5) / LT RT (Xbox)</div>
-            <div>Special: Z / L1 R1 (PS5) / LB RB (Xbox)</div>
+            <div>Jump: ↑ W Space / ⭕ Circle (PS5) / B (Xbox)</div>
             <div>Pause: ESC P / Options (PS5) / Menu (Xbox)</div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div><strong>💡 Tips:</strong></div>
-            <div>Build combos for bonus damage!</div>
-            <div>Special moves deal 3x damage</div>
-            <div>Heavy attacks build special meter faster</div>
-            <div>PS5 haptic feedback on hits!</div>
+          <div style={{ textAlign: 'center', flex: 1 }}>
+            <div><strong>🥊 Enhanced Combat:</strong></div>
+            <div>Left Punch: Q / 🔲 Square (PS4/PS5)</div>
+            <div>Right Punch: E / 🔺 Triangle (PS4/PS5)</div>
+            <div>Left Kick: F / ❌ X/Cross (PS4/PS5)</div>
+            <div>Right Kick: G / ⭕ Circle (PS4/PS5)</div>
+            <div style={{ color: '#ffd700', marginTop: '0.3rem' }}>💥 Combo: Press both punches/kicks together!</div>
+          </div>
+          <div style={{ textAlign: 'right', flex: 1 }}>
+            <div><strong>💡 Combat Tips:</strong></div>
+            <div>🥊 Double Punch: 1.8x damage</div>
+            <div>🦵 Double Kick: 2.2x damage</div>
+            <div>⚡ Kicks are stronger than punches</div>
+            <div>🔥 Build combos for bonus damage!</div>
+            <div>⭐ Special: Z (when meter full)</div>
           </div>
         </div>
         <div style={{ 
@@ -1712,7 +1929,7 @@ const SideScroller = ({ character }) => {
           gap: '2rem'
         }}>
           <span>Player: {player.name} vs Enemy: {enemy.name}</span>
-          <span>Sprites: {playerSpriteRef.current?.loaded ? '✅' : '⏳'} / {enemySpriteRef.current?.loaded ? '✅' : '⏳'}</span>
+          <span>Sprites: {spritesLoaded.player ? '✅' : '⏳'} / {spritesLoaded.enemy ? '✅' : '⏳'}</span>
           <span>Particles: {particles.length}</span>
           {connectedGamepad.type && (
             <span style={{ color: '#4facfe' }}>

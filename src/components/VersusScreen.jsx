@@ -5,14 +5,24 @@ const VersusScreen = ({ character, onContinue }) => {
   const [showContinue, setShowContinue] = useState(false);
 
   useEffect(() => {
+    console.log('VersusScreen mounted with character:', character);
+    console.log('onContinue function:', onContinue);
+    
     // Animate the versus screen entrance
-    const timer1 = setTimeout(() => setShowVersus(true), 500);
-    const timer2 = setTimeout(() => setShowContinue(true), 2500);
+    const timer1 = setTimeout(() => {
+      console.log('Setting showVersus to true');
+      setShowVersus(true);
+    }, 500);
+    const timer2 = setTimeout(() => {
+      console.log('Setting showContinue to true');
+      setShowContinue(true);
+    }, 1000); // Reduced from 2500ms to 1000ms for faster appearance
     
     // Auto-continue after 4 seconds
     const timer3 = setTimeout(() => {
+      console.log('Auto-continuing to battle screen');
       onContinue();
-    }, 4000);
+    }, 10000); // Increased to 10 seconds to give more time to click
 
     return () => {
       clearTimeout(timer1);
@@ -27,8 +37,7 @@ const VersusScreen = ({ character, onContinue }) => {
   return (
     <div className="versus-screen">
       <div className="versus-background">
-        <div className="versus-lightning"></div>
-        <div className="versus-lightning"></div>
+        {/* Reduced lightning effects - only one instead of three */}
         <div className="versus-lightning"></div>
       </div>
       
@@ -60,9 +69,8 @@ const VersusScreen = ({ character, onContinue }) => {
         {/* VS Logo */}
         <div className="versus-logo">
           <div className="versus-text">VS</div>
+          {/* Reduced sparks - only two instead of four */}
           <div className="versus-sparks">
-            <div className="spark"></div>
-            <div className="spark"></div>
             <div className="spark"></div>
             <div className="spark"></div>
           </div>
@@ -94,15 +102,80 @@ const VersusScreen = ({ character, onContinue }) => {
       </div>
 
       {/* Ready message */}
-      <div className={`versus-ready ${showContinue ? 'show' : ''}`}>
+      <div 
+        className={`versus-ready ${showContinue ? 'show' : ''}`}
+        style={{
+          zIndex: 2000,
+          position: 'fixed',
+          bottom: '10%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          textAlign: 'center'
+        }}
+      >
         <h1>PREPARE FOR BATTLE!</h1>
-        <p>Click anywhere to continue</p>
+        <button 
+          style={{
+            background: 'linear-gradient(135deg, #ff4757 0%, #ff3742 100%)',
+            color: 'white',
+            border: '3px solid #fff',
+            padding: '20px 40px',
+            borderRadius: '15px',
+            fontSize: '1.6rem',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            marginTop: '2rem',
+            boxShadow: '0 8px 25px rgba(255, 71, 87, 0.6)',
+            transition: 'all 0.3s ease',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            zIndex: 2001,
+            position: 'relative'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.transform = 'scale(1.1)';
+            e.target.style.boxShadow = '0 12px 35px rgba(255, 71, 87, 0.8)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.boxShadow = '0 8px 25px rgba(255, 71, 87, 0.6)';
+          }}
+          onClick={() => {
+            console.log('Continue button clicked, calling onContinue');
+            onContinue();
+          }}
+        >
+          ⚔️ START BATTLE ⚔️
+        </button>
+        <p style={{ 
+          marginTop: '1rem', 
+          color: '#fff', 
+          fontSize: '1rem',
+          fontWeight: 'bold',
+          textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+        }}>
+          Auto-battle starts in a few seconds, or click the button above
+        </p>
+        
+        {/* Debug info */}
+        <div style={{
+          color: '#0ff',
+          fontSize: '0.8rem',
+          marginTop: '0.5rem'
+        }}>
+          Debug: showContinue = {showContinue.toString()}
+        </div>
       </div>
 
-      {/* Click to continue overlay */}
+      {/* Optional: Remove click anywhere functionality to avoid conflicts */}
+      {/*
       {showContinue && (
-        <div className="versus-overlay" onClick={onContinue}></div>
+        <div className="versus-overlay" onClick={() => {
+          console.log('Overlay clicked, calling onContinue');
+          onContinue();
+        }}></div>
       )}
+      */}
     </div>
   );
 };
