@@ -8,21 +8,21 @@ const VersusScreen = ({ character, onContinue }) => {
     console.log('VersusScreen mounted with character:', character);
     console.log('onContinue function:', onContinue);
     
-    // Animate the versus screen entrance
+    // Animate the versus screen entrance - much faster loading
     const timer1 = setTimeout(() => {
       console.log('Setting showVersus to true');
       setShowVersus(true);
-    }, 500);
+    }, 100); // Reduced from 500ms to 100ms
     const timer2 = setTimeout(() => {
       console.log('Setting showContinue to true');
       setShowContinue(true);
-    }, 1000); // Reduced from 2500ms to 1000ms for faster appearance
+    }, 300); // Reduced from 1000ms to 300ms for much faster appearance
     
-    // Auto-continue after 4 seconds
+    // Auto-continue after shorter time
     const timer3 = setTimeout(() => {
       console.log('Auto-continuing to battle screen');
       onContinue();
-    }, 10000); // Increased to 10 seconds to give more time to click
+    }, 8000); // Reduced from 10000ms to 8000ms
 
     return () => {
       clearTimeout(timer1);
@@ -37,8 +37,7 @@ const VersusScreen = ({ character, onContinue }) => {
   return (
     <div className="versus-screen">
       <div className="versus-background">
-        {/* Reduced lightning effects - only one instead of three */}
-        <div className="versus-lightning"></div>
+        {/* Minimal effects for better performance */}
       </div>
       
       <div className={`versus-content ${showVersus ? 'show' : ''}`}>
@@ -126,14 +125,15 @@ const VersusScreen = ({ character, onContinue }) => {
             cursor: 'pointer',
             marginTop: '2rem',
             boxShadow: '0 8px 25px rgba(255, 71, 87, 0.6)',
-            transition: 'all 0.3s ease',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
             textTransform: 'uppercase',
             letterSpacing: '2px',
             zIndex: 2001,
-            position: 'relative'
+            position: 'relative',
+            willChange: 'transform'
           }}
           onMouseOver={(e) => {
-            e.target.style.transform = 'scale(1.1)';
+            e.target.style.transform = 'scale(1.05)';
             e.target.style.boxShadow = '0 12px 35px rgba(255, 71, 87, 0.8)';
           }}
           onMouseOut={(e) => {
@@ -154,17 +154,8 @@ const VersusScreen = ({ character, onContinue }) => {
           fontWeight: 'bold',
           textShadow: '0 2px 4px rgba(0,0,0,0.5)'
         }}>
-          Auto-battle starts in a few seconds, or click the button above
+          Click to start immediately or wait for auto-start
         </p>
-        
-        {/* Debug info */}
-        <div style={{
-          color: '#0ff',
-          fontSize: '0.8rem',
-          marginTop: '0.5rem'
-        }}>
-          Debug: showContinue = {showContinue.toString()}
-        </div>
       </div>
 
       {/* Optional: Remove click anywhere functionality to avoid conflicts */}

@@ -112,7 +112,10 @@ const Navigation = () => {
           fontSize: '1.5rem',
           fontWeight: 'bold',
           color: theme.colors.primary,
-          textDecoration: 'none'
+          textDecoration: 'none',
+          padding: '0.5rem 1rem',
+          borderRadius: '8px',
+          border: `1px solid ${theme.colors.primary}30`
         }}
       >
         <span>⚡</span>
@@ -146,7 +149,11 @@ const Navigation = () => {
                   : selectedIndex === index 
                     ? `${theme.colors.primary}20` 
                     : 'transparent',
-                border: selectedIndex === index ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+                border: isActive 
+                  ? `2px solid ${theme.colors.primary}` 
+                  : selectedIndex === index 
+                    ? `2px solid ${theme.colors.primary}` 
+                    : `1px solid ${theme.colors.primary}40`,
                 transition: 'all 0.3s ease',
                 fontSize: '0.9rem',
                 fontWeight: isActive ? '600' : '400'
@@ -245,6 +252,9 @@ const Navigation = () => {
                   textDecoration: 'none',
                   color: isActive ? theme.colors.background : theme.colors.text,
                   background: isActive ? theme.colors.primary : 'transparent',
+                  border: isActive 
+                    ? `2px solid ${theme.colors.primary}` 
+                    : `1px solid ${theme.colors.primary}30`,
                   transition: 'all 0.3s ease',
                   fontSize: '1rem',
                   fontWeight: isActive ? '600' : '400'

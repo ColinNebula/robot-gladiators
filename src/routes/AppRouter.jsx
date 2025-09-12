@@ -1,143 +1,141 @@
-import React, { Suspense, lazy } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { motion } from 'framer-motion';
+﻿import React, { Suspense, lazy } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Lazy load pages for better performance
+// Lazy load components for better performance
 const HomePage = lazy(() => import('../pages/HomePage'));
-const PlayPage = lazy(() => import('../pages/PlayPage'));
 const CharacterSelectPage = lazy(() => import('../pages/CharacterSelectPage'));
+const GameModeSelectionPage = lazy(() => import('../pages/GameModeSelectionPage'));
+const SinglePlayerPage = lazy(() => import('../pages/SinglePlayerPage'));
+const TwoPlayerPage = lazy(() => import('../pages/TwoPlayerPage'));
 const VersusScreenPage = lazy(() => import('../pages/VersusScreenPage'));
 const SideScrollerPage = lazy(() => import('../pages/SideScrollerPage'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
-const LeaderboardPage = lazy(() => import('../pages/LeaderboardPage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
-const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
+const LeaderboardPage = lazy(() => import('../pages/LeaderboardPage'));
 
-// Page transition animations
-const pageVariants = {
-  initial: { opacity: 0, x: -20 },
-  in: { opacity: 1, x: 0 },
-  out: { opacity: 0, x: 20 }
-};
-
-const pageTransition = {
-  type: 'tween',
-  ease: 'anticipate',
-  duration: 0.3
-};
-
-// Wrapper component for page animations
-const AnimatedRoute = ({ children }) => (
-  <motion.div
-    initial="initial"
-    animate="in"
-    exit="out"
-    variants={pageVariants}
-    transition={pageTransition}
-    style={{ width: '100%', minHeight: '80vh' }}
-  >
-    {children}
-  </motion.div>
-);
-
-// Route definitions
-export const routes = [
+// Route configurations
+const routes = [
   {
     path: '/',
     name: 'Home',
     component: HomePage,
-    exact: true,
-    showInNav: true,
-    icon: '🏠'
+    exact: true
   },
   {
     path: '/play',
     name: 'Play',
-    component: PlayPage,
-    showInNav: true,
-    icon: '�'
+    component: GameModeSelectionPage
+  },
+  {
+    path: '/single-player',
+    name: 'Single Player',
+    component: SinglePlayerPage
+  },
+  {
+    path: '/two-player',
+    name: 'Two Player',
+    component: TwoPlayerPage
   },
   {
     path: '/character-select',
-    name: 'Character Select',
-    component: CharacterSelectPage,
-    showInNav: false
+    name: 'Character Selection',
+    component: CharacterSelectPage
   },
   {
     path: '/versus',
     name: 'Versus Screen',
-    component: VersusScreenPage,
-    showInNav: false
+    component: VersusScreenPage
   },
   {
-    path: '/battle',
-    name: 'Battle',
-    component: SideScrollerPage,
-    showInNav: false
+    path: '/game',
+    name: 'Game',
+    component: SideScrollerPage
   },
   {
     path: '/settings',
     name: 'Settings',
-    component: SettingsPage,
-    showInNav: true,
-    icon: '⚙️'
-  },
-  {
-    path: '/leaderboard',
-    name: 'Leaderboard',
-    component: LeaderboardPage,
-    showInNav: true,
-    icon: '🏆'
+    component: SettingsPage
   },
   {
     path: '/about',
     name: 'About',
-    component: AboutPage,
-    showInNav: true,
-    icon: 'ℹ️'
+    component: AboutPage
+  },
+  {
+    path: '/leaderboard',
+    name: 'Leaderboard',
+    component: LeaderboardPage
   }
 ];
 
-// Main router component
-export default function AppRouter() {
+// Animated Route wrapper
+const AnimatedRoute = ({ children }) => {
+  const pageVariants = {
+    initial: {
+      opacity: 0,
+      x: -100,
+      scale: 0.9
+    },
+    in: {
+      opacity: 1,
+      x: 0,
+      scale: 1
+    },
+    out: {
+      opacity: 0,
+      x: 100,
+      scale: 0.9
+    }
+  };
+
+  const pageTransition = {
+    type: 'tween',
+    ease: 'anticipate',
+    duration: 0.4
+  };
+
   return (
-    <Suspense 
-      fallback={
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '60vh'
-        }}>
-          <LoadingSpinner size="large" />
-        </div>
-      }
+    <motion.div
+      initial="initial"
+      animate="in"
+      exit="out"
+      variants={pageVariants}
+      transition={pageTransition}
+      style={{ width: '100%', height: '100%' }}
     >
-      <Routes>
-        {routes.map(({ path, component: Component, exact }) => (
-          <Route
-            key={path}
-            path={path}
-            element={
-              <AnimatedRoute>
-                <Component />
-              </AnimatedRoute>
-            }
-            exact={exact}
-          />
-        ))}
-        
-        {/* 404 Not Found */}
-        <Route 
-          path="*" 
-          element={
-            <AnimatedRoute>
-              <NotFoundPage />
-            </AnimatedRoute>
-          } 
-        />
-      </Routes>
-    </Suspense>
+      {children}
+    </motion.div>
   );
-}
+};
+
+const AppRouter = () => {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {routes.map((route) => {
+          const Component = route.component;
+          return (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AnimatedRoute>
+                    <Component />
+                  </AnimatedRoute>
+                </Suspense>
+              }
+            />
+          );
+        })}
+      </Routes>
+    </AnimatePresence>
+  );
+};
+
+export default AppRouter;
+export { routes };

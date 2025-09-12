@@ -5,12 +5,20 @@ import VersusScreen from '../components/VersusScreen';
 const VersusScreenPage = () => {
   const navigate = useNavigate();
   const [characters, setCharacters] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get selected characters from sessionStorage
+    // Get selected characters from sessionStorage with faster processing
     const selectedCharacters = sessionStorage.getItem('selectedCharacters');
     if (selectedCharacters) {
-      setCharacters(JSON.parse(selectedCharacters));
+      try {
+        const parsed = JSON.parse(selectedCharacters);
+        setCharacters(parsed);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error parsing character data:', error);
+        navigate('/character-select');
+      }
     } else {
       // If no characters selected, redirect to character select
       navigate('/character-select');
@@ -18,12 +26,12 @@ const VersusScreenPage = () => {
   }, [navigate]);
 
   const handleContinue = () => {
-    console.log('handleContinue called, navigating to /battle');
-    // Navigate to battle screen
-    navigate('/battle');
+    console.log('handleContinue called, navigating to /game');
+    // Navigate to game screen immediately
+    navigate('/game');
   };
 
-  if (!characters) {
+  if (isLoading || !characters) {
     return (
       <div style={{
         display: 'flex',
@@ -31,9 +39,10 @@ const VersusScreenPage = () => {
         justifyContent: 'center',
         minHeight: '100vh',
         fontSize: '1.2rem',
-        color: '#fff'
+        color: '#fff',
+        background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #16213e 100%)'
       }}>
-        Loading characters...
+        Loading battle setup...
       </div>
     );
   }

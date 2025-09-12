@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import AnimatedSprite from './AnimatedSprite';
 
 const CHARACTERS = [
   {
     id: 'malice',
     name: 'Malice',
     avatar: '🤖',
+    spriteId: 'malice',
     description: 'A nimble scout robot with balanced stats.',
     health: 100,
     attack: 10,
@@ -15,6 +17,7 @@ const CHARACTERS = [
     id: 'lugawu',
     name: 'Lugawu',
     avatar: '👾',
+    spriteId: 'lugawu',
     description: 'An advanced ninja with higher attack.',
     health: 90,
     attack: 14,
@@ -25,6 +28,7 @@ const CHARACTERS = [
     id: 'magnus',
     name: 'Magnus',
     avatar: '🦾',
+    spriteId: 'magnus',
     description: 'A heavy warlord with extra health.',
     health: 120,
     attack: 8,
@@ -34,10 +38,14 @@ const CHARACTERS = [
 ];
 
 const CharacterSelect = ({ onSelect }) => {
+  // Get game mode from session storage
+  const storedGameMode = sessionStorage.getItem('gameMode');
+  const initialMode = storedGameMode === 'two-player' ? 'two-player' : 'single';
+  
   const [player1Selected, setPlayer1Selected] = useState(CHARACTERS[0].id);
   const [player2Selected, setPlayer2Selected] = useState(CHARACTERS[1].id);
   const [gamepadConnected, setGamepadConnected] = useState(false);
-  const [selectionMode, setSelectionMode] = useState('single'); // 'single' or 'two-player'
+  const [selectionMode, setSelectionMode] = useState(initialMode);
 
   // Check for gamepad connection
   React.useEffect(() => {
@@ -148,7 +156,14 @@ const CharacterSelect = ({ onSelect }) => {
                 }
               }}
             >
-              <div className="character-avatar" style={{ color: char.color, fontSize: '5rem' }}>{char.avatar}</div>
+              <div className="character-avatar">
+                <AnimatedSprite 
+                  character={char.spriteId}
+                  animation={player1Selected === char.id ? 'celebrate' : 'idle'}
+                  scale={2}
+                  showEffects={true}
+                />
+              </div>
               <h3>{char.name}</h3>
               <p>{char.description}</p>
               <div className="character-stats">
@@ -186,7 +201,14 @@ const CharacterSelect = ({ onSelect }) => {
                 aria-selected={player2Selected === char.id}
                 onClick={() => gamepadConnected && setPlayer2Selected(char.id)}
               >
-                <div className="character-avatar" style={{ color: char.color, fontSize: '5rem' }}>{char.avatar}</div>
+                <div className="character-avatar">
+                  <AnimatedSprite 
+                    character={char.spriteId}
+                    animation={player2Selected === char.id ? 'celebrate' : 'idle'}
+                    scale={2}
+                    showEffects={true}
+                  />
+                </div>
                 <h3>{char.name}</h3>
                 <p>{char.description}</p>
                 <div className="character-stats">

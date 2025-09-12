@@ -30,6 +30,12 @@ const SideScrollerPage = () => {
     });
   };
 
+  const handleBackToMenu = () => {
+    // Navigate back to main menu
+    console.log('handleBackToMenu called - navigating to home');
+    navigate('/');
+  };
+
   if (!characters) {
     return (
       <div style={{
@@ -48,6 +54,7 @@ const SideScrollerPage = () => {
   return (
     <SideScroller 
       character={characters}
+      onBackToMenu={handleBackToMenu}
     />
   );
 };

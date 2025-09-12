@@ -18,7 +18,7 @@ const HomePage = () => {
     { 
       label: 'Quick Battle', 
       icon: '⚔️', 
-      path: '/character-select',
+      path: '/play',
       description: 'Jump into battle immediately'
     },
     { 
@@ -172,7 +172,7 @@ const HomePage = () => {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/character-select')}
+            onClick={() => navigate('/play')}
             style={{
               padding: '1rem 2rem',
               fontSize: '1.1rem',
