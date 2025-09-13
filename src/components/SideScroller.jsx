@@ -551,15 +551,69 @@ class SpriteAnimation {
 }
 
 const SideScroller = ({ character, onBackToMenu }) => {
+  console.log('🎮 SideScroller component mounting with props:', { character, onBackToMenu });
+  console.log('📊 Character data received:', character);
+  
   const canvasRef = useRef(null);
   const playerSpriteRef = useRef(null);
   const enemySpriteRef = useRef(null);
+  const backgroundStars = useRef([]);
+  const backgroundClouds = useRef([]);
+  const backgroundDebris = useRef([]);
   
   // Enable sprite debugging via console: window.DEBUG_SPRITES = true
   useEffect(() => {
     window.DEBUG_SPRITES = true; // Temporarily enabled for debugging sprites
     console.log('🐛 Sprite debugging is ENABLED - you should see green outlines around sprites');
+    
+    // Initialize background elements
+    initializeBackgroundElements();
   }, []);
+  
+  // Initialize atmospheric background elements
+  function initializeBackgroundElements() {
+    // Create stars
+    backgroundStars.current = [];
+    for (let i = 0; i < 150; i++) {
+      backgroundStars.current.push({
+        x: Math.random() * 1200,
+        y: Math.random() * 300,
+        size: Math.random() * 2 + 0.5,
+        brightness: Math.random() * 0.8 + 0.2,
+        twinkleSpeed: Math.random() * 0.02 + 0.005,
+        twinkleOffset: Math.random() * Math.PI * 2
+      });
+    }
+    
+    // Create distant clouds
+    backgroundClouds.current = [];
+    for (let i = 0; i < 8; i++) {
+      backgroundClouds.current.push({
+        x: Math.random() * 1400 - 100,
+        y: Math.random() * 200 + 50,
+        width: Math.random() * 200 + 100,
+        height: Math.random() * 50 + 30,
+        speed: Math.random() * 0.2 + 0.1,
+        opacity: Math.random() * 0.3 + 0.1
+      });
+    }
+    
+    // Create floating debris
+    backgroundDebris.current = [];
+    for (let i = 0; i < 20; i++) {
+      backgroundDebris.current.push({
+        x: Math.random() * 1200,
+        y: Math.random() * 400,
+        size: Math.random() * 3 + 1,
+        speedX: (Math.random() - 0.5) * 0.5,
+        speedY: (Math.random() - 0.5) * 0.3,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 0.02,
+        opacity: Math.random() * 0.4 + 0.1,
+        color: ['#444', '#555', '#666', '#777'][Math.floor(Math.random() * 4)]
+      });
+    }
+  }
   
   const playerRef = useRef({
     x: 150, // Moved further from edge for wider screen
@@ -597,6 +651,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
   
   const [player, setPlayer] = useState(playerRef.current);
   const [enemy, setEnemy] = useState(enemyRef.current);
+  const [projectiles, setProjectiles] = useState([]);
   const [collisionAnimation, setCollisionAnimation] = useState({ active: false, x: 0, y: 0, timer: 0 });
   const [screenShake, setScreenShake] = useState({ active: false, intensity: 0, timer: 0 });
   const [isPaused, setIsPaused] = useState(false);
@@ -634,6 +689,24 @@ const SideScroller = ({ character, onBackToMenu }) => {
     lastDpadInput: { x: 0, y: 0 },
     navigationCooldown: 0
   });
+
+  // Pause menu handlers
+  const handleResumeGame = () => {
+    setIsPaused(false);
+  };
+
+  const handleMainMenu = () => {
+    try {
+      if (onBackToMenu && typeof onBackToMenu === 'function') {
+        onBackToMenu();
+      } else {
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Error in main menu navigation:', error);
+      window.location.reload();
+    }
+  };
 
   // Initialize enhanced sprite animations
   useEffect(() => {
@@ -677,10 +750,55 @@ const SideScroller = ({ character, onBackToMenu }) => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) {
+      console.error('❌ Canvas not found! Game cannot start.');
+      return;
+    }
+    
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('❌ Canvas context not available! Game cannot start.');
+      return;
+    }
+    
+    console.log('✅ Canvas and context ready, starting game loop...');
     let animationFrameId;
 
     function draw() {
+      try {
+        console.log('🎨 Drawing frame...');
+        
+        // Clear canvas first
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw atmospheric background elements
+        drawAtmosphericBackground(ctx, canvas);
+        
+        // Draw simple ground for now
+        ctx.fillStyle = '#333';
+        ctx.fillRect(0, GROUND_Y, canvas.width, 40);
+        
+        // Draw basic player rectangle if sprites not loaded
+        if (!spritesLoaded.player) {
+          ctx.fillStyle = '#00ff00';
+          ctx.fillRect(playerRef.current.x, playerRef.current.y, CHARACTER_WIDTH, CHARACTER_HEIGHT);
+        }
+        
+        // Draw basic enemy rectangle if sprites not loaded
+        if (!spritesLoaded.enemy) {
+          ctx.fillStyle = '#ff0000';
+          ctx.fillRect(enemyRef.current.x, enemyRef.current.y, CHARACTER_WIDTH, CHARACTER_HEIGHT);
+        }
+        
+        console.log('✅ Frame drawn successfully');
+        
+      } catch (error) {
+        console.error('❌ Error in draw function:', error);
+        throw error; // Re-throw so the loop can catch it
+      }
+      
+      // TODO: Add back complex drawing features once basic rendering works
+      /*
       // Apply screen shake - SIMPLIFIED FOR DEBUGGING
       let shakeX = 0, shakeY = 0;
       /*
@@ -690,41 +808,163 @@ const SideScroller = ({ character, onBackToMenu }) => {
       }
       */
       
-      // Clear canvas normally without transformation
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Draw enhanced atmospheric background
+      drawAtmosphericBackground(ctx, canvas);
       
-      // Draw ground
-      ctx.fillStyle = '#222';
-      ctx.fillRect(0, GROUND_Y + 40, canvas.width, 40);
+      // Draw enhanced futuristic ground platform
+      const time = Date.now() * 0.001;
+      
+      // Main ground platform
+      const groundGradient = ctx.createLinearGradient(0, GROUND_Y, 0, GROUND_Y + 40);
+      groundGradient.addColorStop(0, '#4a4a6a');
+      groundGradient.addColorStop(0.3, '#333355');
+      groundGradient.addColorStop(0.7, '#2a2a3a');
+      groundGradient.addColorStop(1, '#1a1a2a');
+      ctx.fillStyle = groundGradient;
+      ctx.fillRect(0, GROUND_Y, canvas.width, 40);
+      
+      // Ground edge highlight
+      ctx.save();
+      ctx.strokeStyle = '#4facfe';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.6 + Math.sin(time * 2) * 0.2;
+      ctx.shadowColor = '#4facfe';
+      ctx.shadowBlur = 5;
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(canvas.width, GROUND_Y);
+      ctx.stroke();
+      ctx.restore();
+      
+      // Futuristic grid pattern
+      ctx.save();
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.4;
+      
+      // Vertical grid lines
+      for (let i = 0; i < canvas.width; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, GROUND_Y + 5);
+        ctx.lineTo(i, GROUND_Y + 35);
+        ctx.stroke();
+      }
+      
+      // Horizontal grid lines
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y + 10 + (i * 10));
+        ctx.lineTo(canvas.width, GROUND_Y + 10 + (i * 10));
+        ctx.stroke();
+      }
+      
+      // Glowing energy conduits
+      ctx.strokeStyle = '#4facfe';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.3 + Math.sin(time * 3) * 0.2;
+      ctx.shadowColor = '#4facfe';
+      ctx.shadowBlur = 3;
+      
+      for (let i = 0; i < canvas.width; i += 120) {
+        const offset = Math.sin(time * 2 + i * 0.01) * 2;
+        ctx.beginPath();
+        ctx.moveTo(i + offset, GROUND_Y + 15);
+        ctx.lineTo(i + 80 + offset, GROUND_Y + 25);
+        ctx.stroke();
+      }
+      
+      ctx.restore();
       
       // TEST: Draw current particle count (small display)
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.font = '12px Arial';
       ctx.fillText(`Particles: ${particles.length}`, 20, 25);
       
-      // Draw player using enhanced sprite animation
+      // Draw player using enhanced sprite animation with glow effects
+      ctx.save();
+      
+      // Add glow effect for special states
+      if (playerRef.current.isAttacking || specialMeter.player > 80) {
+        ctx.shadowColor = '#4facfe';
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+      
       if (playerSpriteRef.current && spritesLoaded.player) {
         const flipX = playerRef.current.facing === 'left';
         playerSpriteRef.current.draw(ctx, playerRef.current.x, playerRef.current.y, flipX);
       } else {
-        // Fallback emoji
-        ctx.font = '96px serif';
+        // Enhanced fallback with gradient design
+        const playerGradient = ctx.createLinearGradient(
+          playerRef.current.x - 40, playerRef.current.y - 80,
+          playerRef.current.x + 40, playerRef.current.y
+        );
+        playerGradient.addColorStop(0, '#00ff88');
+        playerGradient.addColorStop(1, '#00cc66');
+        ctx.fillStyle = playerGradient;
+        
+        // Rounded rectangle body
+        const x = playerRef.current.x - 40;
+        const y = playerRef.current.y - 80;
+        ctx.beginPath();
+        ctx.roundRect(x, y, 80, 80, 10);
+        ctx.fill();
+        
+        // Enhanced text
+        ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#4facfe';
-        ctx.fillText(playerRef.current.avatar, playerRef.current.x, playerRef.current.y);
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.strokeText('P1', playerRef.current.x, playerRef.current.y - 40);
+        ctx.fillText('P1', playerRef.current.x, playerRef.current.y - 40);
       }
       
-      // Draw enemy using enhanced sprite animation
+      ctx.restore();
+      
+      // Draw enemy using enhanced sprite animation with glow effects
+      ctx.save();
+      
+      // Add glow effect for special states
+      if (enemyRef.current.isAttacking || specialMeter.enemy > 80) {
+        ctx.shadowColor = '#ff4757';
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+      
       if (enemySpriteRef.current && spritesLoaded.enemy) {
         const flipX = enemyRef.current.facing === 'left';
         enemySpriteRef.current.draw(ctx, enemyRef.current.x, enemyRef.current.y, flipX);
       } else {
-        // Fallback emoji
-        ctx.font = '96px serif';
+        // Enhanced fallback with gradient design
+        const enemyGradient = ctx.createLinearGradient(
+          enemyRef.current.x - 40, enemyRef.current.y - 80,
+          enemyRef.current.x + 40, enemyRef.current.y
+        );
+        enemyGradient.addColorStop(0, '#ff6b6b');
+        enemyGradient.addColorStop(1, '#ee5a52');
+        ctx.fillStyle = enemyGradient;
+        
+        // Rounded rectangle body
+        const x = enemyRef.current.x - 40;
+        const y = enemyRef.current.y - 80;
+        ctx.beginPath();
+        ctx.roundRect(x, y, 80, 80, 10);
+        ctx.fill();
+        
+        // Enhanced text
+        ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#ff4757';
-        ctx.fillText(enemyRef.current.avatar, enemyRef.current.x, enemyRef.current.y);
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.strokeText('P2', enemyRef.current.x, enemyRef.current.y - 40);
+        ctx.fillText('P2', enemyRef.current.x, enemyRef.current.y - 40);
       }
+      
+      ctx.restore();
       
       // Draw collision impact effect
       if (collisionAnimation.active) {
@@ -1170,6 +1410,63 @@ const SideScroller = ({ character, onBackToMenu }) => {
         }
       }
       
+      // Draw enhanced projectiles with glowing effects
+      projectiles.forEach((projectile, index) => {
+        ctx.save();
+        
+        // Add projectile glow effect
+        ctx.shadowColor = projectile.owner === 'player' ? '#4facfe' : '#ff4757';
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        // Projectile body with gradient
+        const projectileGradient = ctx.createRadialGradient(
+          projectile.x, projectile.y, 0,
+          projectile.x, projectile.y, projectile.size + 5
+        );
+        
+        if (projectile.owner === 'player') {
+          projectileGradient.addColorStop(0, '#ffffff');
+          projectileGradient.addColorStop(0.3, '#4facfe');
+          projectileGradient.addColorStop(1, '#0099ff');
+        } else {
+          projectileGradient.addColorStop(0, '#ffffff');
+          projectileGradient.addColorStop(0.3, '#ff4757');
+          projectileGradient.addColorStop(1, '#ff0000');
+        }
+        
+        ctx.fillStyle = projectileGradient;
+        ctx.beginPath();
+        ctx.arc(projectile.x, projectile.y, projectile.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Projectile core
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(projectile.x, projectile.y, projectile.size * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Motion trail effect
+        const trailLength = 8;
+        ctx.globalAlpha = 0.3;
+        for (let i = 1; i <= trailLength; i++) {
+          const trailX = projectile.x - (projectile.vx * i * 0.1);
+          const trailY = projectile.y - (projectile.vy * i * 0.1);
+          const trailSize = projectile.size * (1 - i / trailLength * 0.8);
+          const alpha = (trailLength - i) / trailLength * 0.5;
+          
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = projectile.owner === 'player' ? '#4facfe' : '#ff4757';
+          ctx.beginPath();
+          ctx.arc(trailX, trailY, trailSize, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        ctx.restore();
+      });
+      
       // GLOBAL DEBUG OVERLAY - Show particle system status ALWAYS
       ctx.save();
       ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
@@ -1197,6 +1494,429 @@ const SideScroller = ({ character, onBackToMenu }) => {
         ctx.fillText(`NO PARTICLES VISIBLE!`, canvas.width - 270, 110);
       }
       ctx.restore();
+      
+      // Apply cinematic vignette effect
+      const vignetteCenterX = canvas.width / 2;
+      const vignetteCenterY = canvas.height / 2;
+      const vignetteRadius = Math.max(canvas.width, canvas.height) * 0.8;
+      
+      const vignetteGradient = ctx.createRadialGradient(
+        vignetteCenterX, vignetteCenterY, 0,
+        vignetteCenterX, vignetteCenterY, vignetteRadius
+      );
+      vignetteGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      vignetteGradient.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
+      
+      ctx.fillStyle = vignetteGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Enhanced atmospheric background drawing
+    function drawAtmosphericBackground(ctx, canvas) {
+      const time = Date.now() * 0.001;
+      
+      // 1. Animated sky gradient with atmospheric perspective
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.7);
+      skyGradient.addColorStop(0, `hsl(${220 + Math.sin(time * 0.3) * 15}, 45%, ${8 + Math.sin(time * 0.2) * 2}%)`);
+      skyGradient.addColorStop(0.3, `hsl(${210 + Math.sin(time * 0.4) * 12}, 40%, ${12 + Math.sin(time * 0.3) * 3}%)`);
+      skyGradient.addColorStop(0.7, `hsl(${200 + Math.sin(time * 0.5) * 10}, 35%, ${15 + Math.sin(time * 0.1) * 2}%)`);
+      skyGradient.addColorStop(1, `hsl(${190 + Math.sin(time * 0.6) * 8}, 30%, ${18 + Math.sin(time * 0.4) * 3}%)`);
+      ctx.fillStyle = skyGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height * 0.8);
+      
+      // 2. Distant mountain silhouettes
+      ctx.save();
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = '#1a1a2e';
+      
+      // Mountain layer 1 (furthest)
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height * 0.6);
+      for (let x = 0; x <= canvas.width; x += 50) {
+        const y = canvas.height * 0.6 + Math.sin((x + time * 20) * 0.01) * 30 + Math.sin(x * 0.005) * 50;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.fill();
+      
+      // Mountain layer 2 (closer)
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#16213e';
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height * 0.7);
+      for (let x = 0; x <= canvas.width; x += 40) {
+        const y = canvas.height * 0.7 + Math.sin((x - time * 15) * 0.008) * 40 + Math.sin(x * 0.003) * 60;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.fill();
+      ctx.restore();
+      
+      // 3. Twinkling stars
+      backgroundStars.current.forEach(star => {
+        const twinkle = Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.3 + 0.7;
+        ctx.save();
+        ctx.globalAlpha = star.brightness * twinkle * 0.8;
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = star.size * 2;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        // Add larger stars with cross pattern
+        if (star.size > 1.5) {
+          ctx.save();
+          ctx.globalAlpha = star.brightness * twinkle * 0.4;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1;
+          ctx.shadowColor = '#ffffff';
+          ctx.shadowBlur = 3;
+          const crossSize = star.size * 3;
+          ctx.beginPath();
+          ctx.moveTo(star.x - crossSize, star.y);
+          ctx.lineTo(star.x + crossSize, star.y);
+          ctx.moveTo(star.x, star.y - crossSize);
+          ctx.lineTo(star.x, star.y + crossSize);
+          ctx.stroke();
+          ctx.restore();
+        }
+      });
+      
+      // 4. Slow-moving distant clouds
+      backgroundClouds.current.forEach(cloud => {
+        cloud.x += cloud.speed;
+        if (cloud.x > canvas.width + cloud.width) {
+          cloud.x = -cloud.width;
+          cloud.y = Math.random() * 200 + 50;
+        }
+        
+        ctx.save();
+        ctx.globalAlpha = cloud.opacity;
+        ctx.fillStyle = '#2a2a4a';
+        
+        // Draw cloud with multiple overlapping circles
+        for (let i = 0; i < 5; i++) {
+          const offsetX = (i - 2) * cloud.width * 0.15;
+          const offsetY = Math.sin(i + time * 0.5) * 5;
+          ctx.beginPath();
+          ctx.arc(
+            cloud.x + offsetX + cloud.width * 0.5, 
+            cloud.y + offsetY + cloud.height * 0.5, 
+            cloud.height * 0.4, 
+            0, Math.PI * 2
+          );
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+      
+      // 5. Floating space debris
+      backgroundDebris.current.forEach(debris => {
+        debris.x += debris.speedX;
+        debris.y += debris.speedY;
+        debris.rotation += debris.rotationSpeed;
+        
+        // Wrap around screen
+        if (debris.x > canvas.width + 10) debris.x = -10;
+        if (debris.x < -10) debris.x = canvas.width + 10;
+        if (debris.y > canvas.height + 10) debris.y = -10;
+        if (debris.y < -10) debris.y = canvas.height + 10;
+        
+        ctx.save();
+        ctx.translate(debris.x, debris.y);
+        ctx.rotate(debris.rotation);
+        ctx.globalAlpha = debris.opacity;
+        ctx.fillStyle = debris.color;
+        
+        // Draw small geometric debris
+        if (Math.random() > 0.5) {
+          // Rectangle debris
+          ctx.fillRect(-debris.size, -debris.size, debris.size * 2, debris.size * 2);
+        } else {
+          // Triangle debris
+          ctx.beginPath();
+          ctx.moveTo(0, -debris.size);
+          ctx.lineTo(-debris.size, debris.size);
+          ctx.lineTo(debris.size, debris.size);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+      
+      // 6. Atmospheric lighting effects
+      const lightingGradient = ctx.createRadialGradient(
+        canvas.width * 0.3, canvas.height * 0.2, 0,
+        canvas.width * 0.3, canvas.height * 0.2, canvas.width * 0.8
+      );
+      lightingGradient.addColorStop(0, 'rgba(79, 172, 254, 0.1)');
+      lightingGradient.addColorStop(0.5, 'rgba(79, 172, 254, 0.05)');
+      lightingGradient.addColorStop(1, 'rgba(79, 172, 254, 0)');
+      ctx.fillStyle = lightingGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height * 0.8);
+      
+      // 7. Dynamic energy fields
+      for (let i = 0; i < 3; i++) {
+        const fieldX = (canvas.width * 0.2) + (i * canvas.width * 0.3);
+        const fieldY = canvas.height * 0.4 + Math.sin(time * 0.8 + i * 2) * 20;
+        
+        ctx.save();
+        ctx.globalAlpha = 0.05 + Math.sin(time * 1.2 + i) * 0.03;
+        const energyGradient = ctx.createRadialGradient(
+          fieldX, fieldY, 0,
+          fieldX, fieldY, 100
+        );
+        energyGradient.addColorStop(0, '#4facfe');
+        energyGradient.addColorStop(1, 'rgba(79, 172, 254, 0)');
+        ctx.fillStyle = energyGradient;
+        ctx.beginPath();
+        ctx.arc(fieldX, fieldY, 100, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      
+      // 8. Distant futuristic city skyline
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      
+      // Draw city buildings
+      const buildingHeights = [60, 80, 45, 90, 55, 75, 65, 85, 50, 70];
+      const buildingWidth = canvas.width / buildingHeights.length;
+      
+      buildingHeights.forEach((height, index) => {
+        const x = index * buildingWidth;
+        const y = canvas.height * 0.6 - height;
+        
+        // Building gradient
+        const buildingGradient = ctx.createLinearGradient(x, y, x, y + height);
+        buildingGradient.addColorStop(0, '#2a2a4a');
+        buildingGradient.addColorStop(1, '#1a1a2e');
+        ctx.fillStyle = buildingGradient;
+        ctx.fillRect(x, y, buildingWidth - 2, height);
+        
+        // Building windows (some lit up)
+        const windowRows = Math.floor(height / 12);
+        const windowCols = Math.floor(buildingWidth / 8);
+        
+        for (let row = 0; row < windowRows; row++) {
+          for (let col = 0; col < windowCols; col++) {
+            if (Math.random() > 0.7) { // 30% chance of lit window
+              const windowX = x + col * 8 + 2;
+              const windowY = y + row * 12 + 3;
+              const windowColor = Math.random() > 0.8 ? '#4facfe' : '#ffd700';
+              
+              ctx.fillStyle = windowColor;
+              ctx.globalAlpha = 0.6 + Math.sin(time * 2 + index + row + col) * 0.3;
+              ctx.fillRect(windowX, windowY, 4, 6);
+            }
+          }
+        }
+        
+        // Building antenna/spires
+        if (Math.random() > 0.5) {
+          ctx.globalAlpha = 0.5;
+          ctx.strokeStyle = '#4facfe';
+          ctx.lineWidth = 2;
+          ctx.shadowColor = '#4facfe';
+          ctx.shadowBlur = 5;
+          
+          const antennaX = x + buildingWidth / 2;
+          const antennaHeight = height * 0.3;
+          
+          ctx.beginPath();
+          ctx.moveTo(antennaX, y);
+          ctx.lineTo(antennaX, y - antennaHeight);
+          ctx.stroke();
+          
+          // Blinking antenna light
+          if (Math.sin(time * 3 + index) > 0.5) {
+            ctx.fillStyle = '#ff4757';
+            ctx.shadowColor = '#ff4757';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(antennaX, y - antennaHeight, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      });
+      
+      ctx.restore();
+      
+      // 9. Flying vehicles/ships in the distance
+      const vehicleTime = time * 0.3;
+      for (let i = 0; i < 2; i++) {
+        const vehicleX = (vehicleTime * 50 + i * 400) % (canvas.width + 100) - 50;
+        const vehicleY = canvas.height * 0.3 + Math.sin(vehicleTime + i * 3) * 20;
+        
+        if (vehicleX > -50 && vehicleX < canvas.width + 50) {
+          ctx.save();
+          ctx.globalAlpha = 0.4;
+          
+          // Vehicle body
+          ctx.fillStyle = '#444';
+          ctx.fillRect(vehicleX, vehicleY, 20, 6);
+          
+          // Vehicle lights
+          ctx.fillStyle = '#4facfe';
+          ctx.globalAlpha = 0.8;
+          ctx.shadowColor = '#4facfe';
+          ctx.shadowBlur = 4;
+          ctx.fillRect(vehicleX + 18, vehicleY + 1, 3, 4);
+          
+          // Trail effect
+          ctx.globalAlpha = 0.2;
+          for (let j = 1; j <= 5; j++) {
+            ctx.fillStyle = `rgba(79, 172, 254, ${0.2 / j})`;
+            ctx.fillRect(vehicleX - j * 3, vehicleY + 2, 2, 2);
+          }
+          
+          ctx.restore();
+        }
+      }
+      
+      // 10. Atmospheric weather particles (space dust)
+      for (let i = 0; i < 30; i++) {
+        const dustX = (time * 20 + i * 40) % (canvas.width + 20) - 10;
+        const dustY = (i * 47) % canvas.height;
+        const dustSize = 0.5 + (i % 3) * 0.5;
+        
+        ctx.save();
+        ctx.globalAlpha = 0.3 + Math.sin(time * 2 + i) * 0.2;
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = dustSize * 2;
+        ctx.beginPath();
+        ctx.arc(dustX, dustY, dustSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      
+      // 11. Holographic advertisements floating in space
+      const hologramTime = time * 0.5;
+      for (let i = 0; i < 3; i++) {
+        const holoX = canvas.width * 0.2 + i * canvas.width * 0.3;
+        const holoY = canvas.height * 0.25 + Math.sin(hologramTime + i * 2) * 15;
+        const holoScale = 0.8 + Math.sin(hologramTime * 1.5 + i) * 0.2;
+        
+        ctx.save();
+        ctx.translate(holoX, holoY);
+        ctx.scale(holoScale, holoScale);
+        ctx.globalAlpha = 0.6 + Math.sin(hologramTime * 2 + i) * 0.3;
+        
+        // Hologram border
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#00ff88';
+        ctx.shadowBlur = 8;
+        ctx.strokeRect(-30, -20, 60, 40);
+        
+        // Hologram content (simulated text/logos)
+        ctx.fillStyle = '#00ff88';
+        ctx.globalAlpha = 0.4;
+        for (let line = 0; line < 3; line++) {
+          const lineY = -10 + line * 8;
+          const lineWidth = 40 - line * 5;
+          ctx.fillRect(-lineWidth/2, lineY, lineWidth, 2);
+        }
+        
+        // Hologram flicker effect
+        if (Math.sin(time * 8 + i * 3) > 0.8) {
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(-30, -20, 60, 40);
+        }
+        
+        ctx.restore();
+      }
+      
+      // 12. Data streams and energy conduits
+      const streamTime = time * 1.5;
+      for (let i = 0; i < 4; i++) {
+        const streamX = canvas.width * (0.1 + i * 0.25);
+        const streamHeight = canvas.height * 0.7;
+        
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        
+        // Main conduit
+        ctx.strokeStyle = '#4facfe';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#4facfe';
+        ctx.shadowBlur = 6;
+        
+        ctx.beginPath();
+        ctx.moveTo(streamX, 0);
+        ctx.lineTo(streamX, streamHeight);
+        ctx.stroke();
+        
+        // Data packets moving through conduits
+        for (let j = 0; j < 5; j++) {
+          const packetY = ((streamTime * 100 + j * 80) % (streamHeight + 40)) - 20;
+          
+          if (packetY >= 0 && packetY <= streamHeight) {
+            ctx.globalAlpha = 0.8;
+            ctx.fillStyle = j % 2 === 0 ? '#4facfe' : '#00ff88';
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 4;
+            
+            ctx.beginPath();
+            ctx.arc(streamX, packetY, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Packet trail
+            ctx.globalAlpha = 0.3;
+            for (let k = 1; k <= 3; k++) {
+              ctx.beginPath();
+              ctx.arc(streamX, packetY + k * 8, 2 - k * 0.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+        
+        ctx.restore();
+      }
+      
+      // 13. Distant space structures/satellites
+      const satelliteTime = time * 0.2;
+      for (let i = 0; i < 2; i++) {
+        const satX = canvas.width * (0.3 + i * 0.4) + Math.sin(satelliteTime + i * 3) * 30;
+        const satY = canvas.height * 0.15 + Math.cos(satelliteTime * 0.7 + i * 2) * 10;
+        
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        
+        // Satellite body
+        ctx.fillStyle = '#333';
+        ctx.fillRect(satX - 8, satY - 4, 16, 8);
+        
+        // Solar panels
+        ctx.fillStyle = '#001122';
+        ctx.fillRect(satX - 15, satY - 2, 6, 4);
+        ctx.fillRect(satX + 9, satY - 2, 6, 4);
+        
+        // Communication dish
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(satX, satY - 8, 4, 0, Math.PI);
+        ctx.stroke();
+        
+        // Blinking status lights
+        if (Math.sin(time * 4 + i * 2) > 0.3) {
+          ctx.fillStyle = i % 2 === 0 ? '#ff4757' : '#4facfe';
+          ctx.shadowColor = ctx.fillStyle;
+          ctx.shadowBlur = 3;
+          ctx.globalAlpha = 0.9;
+          ctx.beginPath();
+          ctx.arc(satX + 6, satY, 1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        ctx.restore();
+      }
     }
 
     function createParticles(x, y, color, count = 4, type = 'normal') {
@@ -1306,6 +2026,29 @@ const SideScroller = ({ character, onBackToMenu }) => {
         console.log(`✅ PARTICLES ADDED: ${prev.length} -> ${updated.length}`);
         return updated;
       });
+    }
+
+    // Enhanced projectile system
+    function fireProjectile(shooter, direction) {
+      const projectileSpeed = 8;
+      const projectileSize = 6;
+      
+      const newProjectile = {
+        x: shooter.x + (direction === 'right' ? 40 : -40),
+        y: shooter.y - 40,
+        vx: direction === 'right' ? projectileSpeed : -projectileSpeed,
+        vy: 0,
+        size: projectileSize,
+        owner: shooter === playerRef.current ? 'player' : 'enemy',
+        damage: Math.floor(shooter.attack * 0.7),
+        life: 120 // frames before disappearing
+      };
+      
+      setProjectiles(prev => [...prev, newProjectile]);
+      console.log(`🚀 Projectile fired by ${newProjectile.owner} in direction ${direction}`);
+      
+      // Create muzzle flash particles
+      createParticles(newProjectile.x, newProjectile.y, '#ffffff', 3, 'spark');
     }
 
     function triggerCollisionAnimation(x, y) {
@@ -1914,6 +2657,92 @@ const SideScroller = ({ character, onBackToMenu }) => {
       enemyRef.current = enemyData;
       setEnemy({ ...enemyData });
       
+      // Update projectiles
+      setProjectiles(prev => {
+        const updatedProjectiles = [];
+        
+        for (let i = 0; i < prev.length; i++) {
+          const projectile = prev[i];
+          
+          // Update projectile position
+          projectile.x += projectile.vx;
+          projectile.y += projectile.vy;
+          projectile.life--;
+          
+          // Check bounds and life
+          if (projectile.life <= 0 || projectile.x < 0 || projectile.x > canvas.width) {
+            console.log(`🚀 Projectile expired or left bounds`);
+            continue; // Remove projectile
+          }
+          
+          // Check collision with characters
+          let hitTarget = false;
+          
+          if (projectile.owner === 'player') {
+            // Player projectile hitting enemy
+            const enemyRect = {
+              x: enemyRef.current.x - CHARACTER_WIDTH/2,
+              y: enemyRef.current.y - CHARACTER_HEIGHT,
+              width: CHARACTER_WIDTH,
+              height: CHARACTER_HEIGHT
+            };
+            const projectileRect = {
+              x: projectile.x - projectile.size,
+              y: projectile.y - projectile.size,
+              width: projectile.size * 2,
+              height: projectile.size * 2
+            };
+            
+            if (checkCollision(projectileRect, enemyRect)) {
+              hitTarget = true;
+              enemyRef.current.health = Math.max(0, enemyRef.current.health - projectile.damage);
+              console.log(`🎯 Player projectile hit enemy for ${projectile.damage} damage`);
+              
+              // Create impact particles
+              createParticles(projectile.x, projectile.y, '#ff4757', 4, 'explosion');
+              createParticles(projectile.x, projectile.y, '#ffffff', 2, 'spark');
+              
+              // Build player special meter
+              setSpecialMeter(prev => ({ ...prev, player: Math.min(100, prev.player + 5) }));
+            }
+          } else {
+            // Enemy projectile hitting player
+            const playerRect = {
+              x: playerRef.current.x - CHARACTER_WIDTH/2,
+              y: playerRef.current.y - CHARACTER_HEIGHT,
+              width: CHARACTER_WIDTH,
+              height: CHARACTER_HEIGHT
+            };
+            const projectileRect = {
+              x: projectile.x - projectile.size,
+              y: projectile.y - projectile.size,
+              width: projectile.size * 2,
+              height: projectile.size * 2
+            };
+            
+            if (checkCollision(projectileRect, playerRect)) {
+              hitTarget = true;
+              playerRef.current.health = Math.max(0, playerRef.current.health - projectile.damage);
+              console.log(`🎯 Enemy projectile hit player for ${projectile.damage} damage`);
+              
+              // Create impact particles
+              createParticles(projectile.x, projectile.y, '#4facfe', 4, 'explosion');
+              createParticles(projectile.x, projectile.y, '#ffffff', 2, 'spark');
+              
+              // Build enemy special meter
+              setSpecialMeter(prev => ({ ...prev, enemy: Math.min(100, prev.enemy + 5) }));
+            }
+          }
+          
+          // Keep projectile if it hasn't hit anything
+          if (!hitTarget) {
+            updatedProjectiles.push(projectile);
+          }
+        }
+        
+        return updatedProjectiles;
+      });
+      
       // Update collision animation
       if (collisionAnimation.active) {
         setCollisionAnimation(prev => ({
@@ -1935,14 +2764,63 @@ const SideScroller = ({ character, onBackToMenu }) => {
     }
 
     function loop() {
-      if (!isPaused && !gameOver.active) {
-        update();
-        draw();
+      try {
+        console.log('🔄 Game loop tick - isPaused:', isPaused, 'gameOver:', gameOver.active, 'spritesLoaded:', spritesLoaded);
+        
+        if (!isPaused && !gameOver.active) {
+          // Only run game logic if sprites are loaded
+          if (spritesLoaded.player && spritesLoaded.enemy) {
+            update();
+            draw();
+          } else {
+            // Show loading indicator while sprites load
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw simple loading screen
+            ctx.fillStyle = 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #16213e 100%)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('🎮 Loading Game Assets...', canvas.width / 2, canvas.height / 2);
+            
+            ctx.font = '16px Arial';
+            ctx.fillText(`Player: ${spritesLoaded.player ? '✅' : '⏳'} Enemy: ${spritesLoaded.enemy ? '✅' : '⏳'}`, canvas.width / 2, canvas.height / 2 + 40);
+          }
+        } else {
+          // Game is paused or over, still draw current state
+          if (spritesLoaded.player && spritesLoaded.enemy) {
+            draw();
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error in game loop:', error);
+        console.error('❌ Error stack:', error.stack);
+        
+        // Draw error state
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ff0000';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('❌ Game Error - Check Console', canvas.width / 2, canvas.height / 2);
       }
+      
       animationFrameId = requestAnimationFrame(loop);
     }
+    console.log('🚀 Starting game loop...');
     loop();
-    return () => cancelAnimationFrame(animationFrameId);
+    
+    return () => {
+      console.log('🛑 Cleaning up game loop...');
+      cancelAnimationFrame(animationFrameId);
+    };
   }, [isPaused, gameOver.active]);
 
   useEffect(() => {
@@ -2104,6 +2982,18 @@ const SideScroller = ({ character, onBackToMenu }) => {
         createParticles(400, 200, '#ff8800', 3, 'shockwave');
         createParticles(450, 200, '#ff0000', 8, 'debris');
         console.log('Created enhanced test particles at center of screen');
+        
+      } else if ((e.key === 'q' || e.key === 'Q') && playerRef.current.attackCooldown === 0) {
+        // Left Projectile (Q key)
+        console.log('Keyboard: Left projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing);
+        playerRef.current.attackCooldown = 20;
+        
+      } else if ((e.key === 'r' || e.key === 'R') && playerRef.current.attackCooldown === 0) {
+        // Right Projectile (R key)
+        console.log('Keyboard: Right projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing);
+        playerRef.current.attackCooldown = 20;
       }
     }
     
@@ -2264,7 +3154,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
             rightKick: [1], // Circle ⭕
             special: [4, 5], // L1 and R1
             pause: [9], // Options button
-            heavy: [6, 7] // L2 and R2 triggers
+            leftProjectile: [6], // L2 trigger
+            rightProjectile: [7], // R2 trigger
+            heavy: [4, 5] // L1 and R1 (changed from L2/R2)
           },
           Xbox: {
             leftPunch: [2], // X button
@@ -2273,7 +3165,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
             rightKick: [1], // B button
             special: [4, 5], // LB and RB
             pause: [7], // Menu button
-            heavy: [6, 7] // LT and RT triggers
+            leftProjectile: [6], // LT trigger
+            rightProjectile: [7], // RT trigger (need to handle this differently)
+            heavy: [4, 5] // LB and RB
           },
           Generic: {
             leftPunch: [2], // Button 2
@@ -2282,7 +3176,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
             rightKick: [1], // Button 1
             special: [4, 5], // Button 4 and 5
             pause: [8, 9], // Button 8 and 9
-            heavy: [6, 7] // Button 6 and 7
+            leftProjectile: [6], // Button 6
+            rightProjectile: [7], // Button 7
+            heavy: [4, 5] // Button 4 and 5
           }
         };
         
@@ -2463,6 +3359,26 @@ const SideScroller = ({ character, onBackToMenu }) => {
           }
         }
         
+        // Projectile controls (L2/R2 or LT/RT)
+        const leftProjectilePressed = controls.leftProjectile?.some(btn => gp.buttons[btn]?.pressed);
+        const lastLeftProjectilePressed = controls.leftProjectile?.some(btn => lastGamepadState.buttons[btn]);
+        
+        if (leftProjectilePressed && !lastLeftProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: Left projectile fired`);
+          fireProjectile(playerRef.current, playerRef.current.facing);
+          playerRef.current.attackCooldown = 20; // Shorter cooldown for projectiles
+        }
+        
+        // Handle R2/RT projectile (different from L2/LT for some controllers)
+        const rightProjectilePressed = controls.rightProjectile?.some(btn => gp.buttons[btn]?.pressed);
+        const lastRightProjectilePressed = controls.rightProjectile?.some(btn => lastGamepadState.buttons[btn]);
+          
+        if (rightProjectilePressed && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: Right projectile fired`);
+          fireProjectile(playerRef.current, playerRef.current.facing);
+          playerRef.current.attackCooldown = 20; // Shorter cooldown for projectiles
+        }
+        
         // Pause (Options/Menu button)
         const pausePressed = controls.pause.some(btn => gp.buttons[btn]?.pressed);
         const lastPausePressed = controls.pause.some(btn => lastGamepadState.buttons[btn]);
@@ -2531,76 +3447,43 @@ const SideScroller = ({ character, onBackToMenu }) => {
         >
           <h2 style={{ margin: '0 0 1rem 0', fontSize: '3rem', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>⏸️ PAUSED</h2>
           <p style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', opacity: 0.9 }}>Press ESC or P to resume</p>
-          <p style={{ margin: '0 0 2rem 0', fontSize: '1rem', opacity: 0.7 }}>🎮 Use D-pad/Left Stick ← → and ❌ X to navigate</p>
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', alignItems: 'center' }}>
             <button
-              onClick={() => setIsPaused(false)}
+              onClick={handleResumeGame}
               style={{
                 padding: '12px 24px',
                 fontSize: '1.1rem',
-                backgroundColor: menuNavigation.pauseMenuFocus === 0 ? '#357abd' : '#4facfe',
+                backgroundColor: '#4facfe',
                 color: '#fff',
-                border: menuNavigation.pauseMenuFocus === 0 ? '3px solid #fff' : 'none',
+                border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                boxShadow: menuNavigation.pauseMenuFocus === 0 ? '0 6px 16px rgba(79, 172, 254, 0.5)' : '0 4px 12px rgba(79, 172, 254, 0.3)',
+                boxShadow: '0 4px 12px rgba(79, 172, 254, 0.3)',
                 transition: 'all 0.2s ease',
-                transform: menuNavigation.pauseMenuFocus === 0 ? 'scale(1.05)' : 'scale(1)'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = '#357abd';
-                setMenuNavigation(prev => ({ ...prev, pauseMenuFocus: 0 }));
-              }}
-              onMouseOut={(e) => {
-                if (menuNavigation.pauseMenuFocus !== 0) e.target.style.backgroundColor = '#4facfe';
+                transform: 'scale(1)',
+                minWidth: '200px'
               }}
             >
               ▶️ Resume Game
             </button>
             <button
-              onClick={(e) => {
-                console.log('Main Menu button clicked!');
-                console.log('onBackToMenu function:', onBackToMenu);
-                e.preventDefault();
-                e.stopPropagation();
-                
-                try {
-                  if (onBackToMenu && typeof onBackToMenu === 'function') {
-                    console.log('Calling onBackToMenu...');
-                    onBackToMenu();
-                  } else {
-                    console.log('onBackToMenu not available or not a function, trying fallback navigation...');
-                    // Try using window.location as a fallback
-                    window.location.href = '/';
-                  }
-                } catch (error) {
-                  console.error('Error in main menu navigation:', error);
-                  // Last resort fallback
-                  window.location.reload();
-                }
-              }}
+              onClick={handleMainMenu}
               style={{
                 padding: '12px 24px',
                 fontSize: '1.1rem',
-                backgroundColor: menuNavigation.pauseMenuFocus === 1 ? '#ff3838' : '#ff4757',
+                backgroundColor: '#ff4757',
                 color: '#fff',
-                border: menuNavigation.pauseMenuFocus === 1 ? '3px solid #fff' : 'none',
+                border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                boxShadow: menuNavigation.pauseMenuFocus === 1 ? '0 6px 16px rgba(255, 71, 87, 0.5)' : '0 4px 12px rgba(255, 71, 87, 0.3)',
+                boxShadow: '0 4px 12px rgba(255, 71, 87, 0.3)',
                 transition: 'all 0.2s ease',
-                transform: menuNavigation.pauseMenuFocus === 1 ? 'scale(1.05)' : 'scale(1)',
-                zIndex: 1000
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = '#ff3838';
-                setMenuNavigation(prev => ({ ...prev, pauseMenuFocus: 1 }));
-              }}
-              onMouseOut={(e) => {
-                if (menuNavigation.pauseMenuFocus !== 1) e.target.style.backgroundColor = '#ff4757';
+                transform: 'scale(1)',
+                zIndex: 1000,
+                minWidth: '200px'
               }}
             >
-              🏠 Main Menu
+              🏠 Main Menu {pauseGamepadNav.isSelected(1) && pauseGamepadNav.isGamepadConnected && ' �'}
             </button>
           </div>
         </div>

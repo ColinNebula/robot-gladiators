@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 import { useGame } from '../context/GameContext';
 import { useGamepad, useAudio } from '../hooks/useGameHooks';
+// import StorageSettings from '../components/StorageSettings';
 
 const SettingsPage = () => {
   const { 
@@ -28,6 +29,7 @@ const SettingsPage = () => {
     { id: 'controls', label: 'Controls', icon: '🎮' },
     { id: 'accessibility', label: 'Accessibility', icon: '♿' },
     { id: 'performance', label: 'Performance', icon: '⚡' },
+    { id: 'storage', label: 'Storage', icon: '💾' },
     { id: 'data', label: 'Data & Privacy', icon: '🔒' }
   ];
 
@@ -441,6 +443,13 @@ const SettingsPage = () => {
       case 'controls': return renderControlsSettings();
       case 'accessibility': return renderAccessibilitySettings();
       case 'performance': return renderPerformanceSettings();
+      case 'storage': return (
+        <div>
+          <h3>Storage Management</h3>
+          <p>Storage management features will be available in a future update.</p>
+          <p>Current storage: {JSON.stringify(Object.keys(sessionStorage)).length} session items</p>
+        </div>
+      );
       case 'data': return renderDataSettings();
       default: return renderDisplaySettings();
     }

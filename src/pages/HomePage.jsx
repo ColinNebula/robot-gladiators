@@ -3,18 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 import { useGame } from '../context/GameContext';
-import { useGamepad } from '../hooks/useGameHooks';
+import useGamepadNavigation from '../hooks/useGamepadNavigation';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const { currentTheme } = useTheme();
   const { state: gameState, dispatch } = useGame();
-  const { gamepad, getButtonPressed } = useGamepad();
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const quickActions = [
+  const menuItems = [
     { 
       label: 'Quick Battle', 
       icon: '⚔️', 
@@ -28,45 +26,55 @@ const HomePage = () => {
       description: 'Compete in the galactic championship'
     },
     { 
-      label: 'Multiplayer', 
-      icon: '👥', 
-      path: '/multiplayer',
-      description: 'Battle against other players'
+      label: 'Settings', 
+      icon: '⚙️', 
+      path: '/settings',
+      description: 'Configure your experience'
     },
     { 
-      label: 'Training', 
-      icon: '🎯', 
-      path: '/training',
-      description: 'Practice your combat skills'
+      label: 'Leaderboard', 
+      icon: '🏆', 
+      path: '/leaderboard',
+      description: 'View top players'
+    },
+    { 
+      label: 'About', 
+      icon: 'ℹ️', 
+      path: '/about',
+      description: 'Game information'
     }
   ];
+
+  // Gamepad navigation setup
+  const {
+    selectedIndex,
+    isGamepadConnected,
+    selectedItem,
+    isSelected
+  } = useGamepadNavigation(menuItems, {
+    onSelect: (item) => {
+      if (item && item.path) {
+        navigate(item.path);
+      }
+    },
+    onBack: () => {
+      // On home page, back could close game or show exit dialog
+      console.log('Back pressed on home page');
+    },
+    onStart: () => {
+      // Start button on home page could open quick menu
+      navigate('/play');
+    },
+    enabled: !isLoading,
+    wrapAround: true,
+    initialIndex: 0
+  });
 
   useEffect(() => {
     // Simulate loading
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
-
-  // Gamepad navigation
-  useEffect(() => {
-    if (!gamepad) return;
-
-    const handleGamepadInput = () => {
-      if (getButtonPressed(12)) { // D-pad up
-        setSelectedIndex(prev => Math.max(0, prev - 1));
-      } else if (getButtonPressed(13)) { // D-pad down
-        setSelectedIndex(prev => Math.min(quickActions.length - 1, prev + 1));
-      } else if (getButtonPressed(0)) { // A button
-        const selectedAction = quickActions[selectedIndex];
-        if (selectedAction) {
-          navigate(selectedAction.path);
-        }
-      }
-    };
-
-    const interval = setInterval(handleGamepadInput, 100);
-    return () => clearInterval(interval);
-  }, [gamepad, selectedIndex, quickActions, navigate]);
 
   if (isLoading) {
     return (
@@ -234,7 +242,7 @@ const HomePage = () => {
           textAlign: 'center',
           marginBottom: '2rem'
         }}>
-          Choose Your Path
+          Choose Your Path {isGamepadConnected && <span style={{ color: currentTheme.colors.primary }}>🎮</span>}
         </h2>
 
         <div style={{
@@ -243,7 +251,7 @@ const HomePage = () => {
           gap: '1.5rem',
           padding: '0 1rem'
         }}>
-          {quickActions.map((action, index) => (
+          {menuItems.map((action, index) => (
             <motion.div
               key={action.label}
               initial={{ opacity: 0, y: 20 }}
@@ -256,25 +264,53 @@ const HomePage = () => {
               }}
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate(action.path)}
-              onMouseEnter={() => setSelectedIndex(index)}
               style={{
-                background: selectedIndex === index 
-                  ? `linear-gradient(135deg, ${currentTheme.colors.primary}20, ${currentTheme.colors.secondary}20)`
+                background: isSelected(index)
+                  ? `linear-gradient(135deg, ${currentTheme.colors.primary}30, ${currentTheme.colors.secondary}30)`
                   : currentTheme.colors.surface,
-                border: selectedIndex === index 
-                  ? `2px solid ${currentTheme.colors.primary}`
+                border: isSelected(index)
+                  ? `3px solid ${currentTheme.colors.primary}`
                   : `1px solid ${currentTheme.colors.primary}30`,
                 borderRadius: '16px',
                 padding: '2rem',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 textAlign: 'center',
-                boxShadow: currentTheme.shadows.medium
+                boxShadow: isSelected(index) 
+                  ? `0 0 20px ${currentTheme.colors.primary}40`
+                  : currentTheme.shadows.medium,
+                transform: isSelected(index) ? 'translateY(-2px)' : 'translateY(0)',
+                position: 'relative'
               }}
             >
+              {isSelected(index) && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    background: currentTheme.colors.primary,
+                    color: currentTheme.colors.background,
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {isGamepadConnected ? '🎮' : '👆'}
+                </motion.div>
+              )}
+              
               <div style={{
                 fontSize: '3rem',
-                marginBottom: '1rem'
+                marginBottom: '1rem',
+                filter: isSelected(index) ? 'brightness(1.2)' : 'brightness(1)'
               }}>
                 {action.icon}
               </div>
@@ -282,7 +318,7 @@ const HomePage = () => {
               <h3 style={{
                 fontSize: '1.25rem',
                 fontWeight: 'bold',
-                color: currentTheme.colors.text,
+                color: isSelected(index) ? currentTheme.colors.primary : currentTheme.colors.text,
                 marginBottom: '0.5rem'
               }}>
                 {action.label}

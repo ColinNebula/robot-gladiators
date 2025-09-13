@@ -54,6 +54,11 @@ const routes = [
     component: SideScrollerPage
   },
   {
+    path: '/test-game',
+    name: 'Test Game',
+    component: SideScrollerPage
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: SettingsPage

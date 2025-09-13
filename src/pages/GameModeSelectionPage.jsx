@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
+import useGamepadNavigation from '../hooks/useGamepadNavigation';
 
 const GameModeSelectionPage = () => {
   const navigate = useNavigate();
@@ -27,6 +28,32 @@ const GameModeSelectionPage = () => {
       path: '/two-player'
     }
   ];
+
+  // Gamepad navigation setup
+  const {
+    selectedIndex,
+    isGamepadConnected,
+    isSelected
+  } = useGamepadNavigation(gameModes, {
+    onSelect: (mode) => {
+      if (mode && mode.path) {
+        handleModeSelect(mode);
+      }
+    },
+    onBack: () => {
+      navigate('/');
+    },
+    onStart: () => {
+      // Start button selects current mode
+      const selectedMode = gameModes[selectedIndex];
+      if (selectedMode) {
+        handleModeSelect(selectedMode);
+      }
+    },
+    enabled: true,
+    wrapAround: true,
+    initialIndex: 0
+  });
 
   const handleModeSelect = (mode) => {
     // Store the selected game mode in sessionStorage
@@ -78,7 +105,7 @@ const GameModeSelectionPage = () => {
           color: 'transparent',
           marginBottom: '1rem'
         }}>
-          Choose Your Battle Mode
+          Choose Your Battle Mode {isGamepadConnected && <span style={{ color: currentTheme.colors.primary }}>🎮</span>}
         </h1>
 
         <p style={{
@@ -113,14 +140,22 @@ const GameModeSelectionPage = () => {
             whileTap={{ scale: 0.95 }}
             onClick={() => handleModeSelect(mode)}
             style={{
-              background: `linear-gradient(135deg, ${currentTheme.colors.surface} 0%, ${mode.color}20 100%)`,
-              border: `2px solid ${mode.color}40`,
+              background: isSelected(index) 
+                ? `linear-gradient(135deg, ${currentTheme.colors.surface} 0%, ${mode.color}40 100%)`
+                : `linear-gradient(135deg, ${currentTheme.colors.surface} 0%, ${mode.color}20 100%)`,
+              border: isSelected(index)
+                ? `3px solid ${mode.color}`
+                : `2px solid ${mode.color}40`,
               borderRadius: '20px',
               padding: '2.5rem',
               cursor: 'pointer',
               position: 'relative',
               overflow: 'hidden',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              boxShadow: isSelected(index) 
+                ? `0 0 30px ${mode.color}50`
+                : '0 4px 15px rgba(0,0,0,0.1)',
+              transform: isSelected(index) ? 'translateY(-5px)' : 'translateY(0)'
             }}
           >
             {/* Background Pattern */}
@@ -136,6 +171,31 @@ const GameModeSelectionPage = () => {
 
             {/* Content */}
             <div style={{ position: 'relative', zIndex: 1 }}>
+              {isSelected(index) && (
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  style={{
+                    position: 'absolute',
+                    top: '15px',
+                    right: '15px',
+                    background: mode.color,
+                    color: '#fff',
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    boxShadow: `0 0 15px ${mode.color}80`
+                  }}
+                >
+                  {isGamepadConnected ? '🎮' : '✓'}
+                </motion.div>
+              )}
+              
               <motion.div
                 animate={{
                   rotate: [0, 10, -10, 0],

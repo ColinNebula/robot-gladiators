@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppRouter from './routes/AppRouter';
 import Navigation from './components/Navigation';
+import SplashScreen from './components/SplashScreen';
 import { useGame } from './context/GameContext';
 import { useTheme } from './context/ThemeContext';
 import { usePerformance, useResponsive } from './hooks/useGameHooks';
@@ -13,10 +14,20 @@ function App() {
   const { currentTheme } = useTheme();
   const { fps, isPerformanceGood } = usePerformance();
   const { isMobile } = useResponsive();
+  const [showSplash, setShowSplash] = useState(true);
 
   // Pages where navigation should be hidden
   const hideNavOnPages = ['/battle', '/versus', '/character-select'];
   const showNavigation = !hideNavOnPages.includes(location.pathname);
+
+  const handleSplashContinue = () => {
+    setShowSplash(false);
+  };
+
+  // Show splash screen initially
+  if (showSplash) {
+    return <SplashScreen onContinue={handleSplashContinue} />;
+  }
 
   return (
     <div style={{

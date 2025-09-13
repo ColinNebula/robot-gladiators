@@ -8,27 +8,58 @@ const VersusScreenPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get selected characters from sessionStorage with faster processing
-    const selectedCharacters = sessionStorage.getItem('selectedCharacters');
-    if (selectedCharacters) {
+    const loadCharacters = () => {
       try {
-        const parsed = JSON.parse(selectedCharacters);
-        setCharacters(parsed);
-        setIsLoading(false);
+        setIsLoading(true);
+        // Get selected characters from sessionStorage with faster processing
+        const selectedCharacters = sessionStorage.getItem('selectedCharacters');
+        
+        if (selectedCharacters) {
+          const parsed = JSON.parse(selectedCharacters);
+          setCharacters(parsed);
+          console.log('✅ Characters loaded successfully:', parsed);
+        } else {
+          console.warn('⚠️ No character data found');
+          navigate('/character-select');
+        }
       } catch (error) {
-        console.error('Error parsing character data:', error);
+        console.error('❌ Error loading character data:', error);
         navigate('/character-select');
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      // If no characters selected, redirect to character select
-      navigate('/character-select');
-    }
+    };
+
+    loadCharacters();
   }, [navigate]);
 
   const handleContinue = () => {
-    console.log('handleContinue called, navigating to /game');
-    // Navigate to game screen immediately
-    navigate('/game');
+    console.log('🎮 handleContinue called - Starting battle!');
+    console.log('📍 Current location:', window.location.pathname);
+    console.log('🎯 Navigating to: /game');
+    console.log('📊 Characters data:', characters);
+    
+    // Validate character data before navigation
+    if (!characters) {
+      console.error('❌ No character data available for battle!');
+      alert('Character data is missing. Please select characters again.');
+      navigate('/character-select');
+      return;
+    }
+    
+    try {
+      // Ensure character data is stored properly using sessionStorage
+      sessionStorage.setItem('selectedCharacters', JSON.stringify(characters));
+      console.log('💾 Character data stored successfully');
+      
+      // Navigate to game screen immediately
+      navigate('/game');
+      console.log('✅ Navigation to /game initiated successfully');
+    } catch (error) {
+      console.error('❌ Error during navigation:', error);
+      console.error('❌ Error stack:', error.stack);
+      alert(`Navigation error: ${error.message}`);
+    }
   };
 
   if (isLoading || !characters) {
@@ -42,7 +73,7 @@ const VersusScreenPage = () => {
         color: '#fff',
         background: 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #16213e 100%)'
       }}>
-        Loading battle setup...
+        {isLoading ? 'Loading battle setup...' : 'Redirecting to character selection...'}
       </div>
     );
   }
