@@ -1266,7 +1266,10 @@ const SideScroller = ({ character, onBackToMenu }) => {
       
       // Render particles - FIXED SYSTEM WITH PROPER ERROR HANDLING
       if (particles.length > 0) {
-        console.log(`🎨 RENDERING ${particles.length} PARTICLES`);
+        // Reduced logging frequency - only log every 60 frames (1 second)
+        if (gameStateRef.current.frameCount % 60 === 0) {
+          console.log(`🎨 RENDERING ${particles.length} PARTICLES (Frame: ${gameStateRef.current.frameCount})`);
+        }
         
         try {
           ctx.save(); // Save context state
@@ -1398,89 +1401,161 @@ const SideScroller = ({ character, onBackToMenu }) => {
           ctx.restore(); // Ensure context is restored even on error
         }
         
-        // Debug info with more details
-        if (particles.length > 0) {
+        // Debug info with reduced frequency
+        if (particles.length > 0 && gameStateRef.current.frameCount % 120 === 0) {
           const explosionCount = particles.filter(p => p.type === 'explosion').length;
           const sparkCount = particles.filter(p => p.type === 'spark').length;
           const shockwaveCount = particles.filter(p => p.type === 'shockwave').length;
           const debrisCount = particles.filter(p => p.type === 'debris').length;
           const normalCount = particles.filter(p => p.type === 'normal').length;
           
-          console.log(`Rendering ${particles.length} particles: ${explosionCount} explosion, ${sparkCount} spark, ${shockwaveCount} shockwave, ${debrisCount} debris, ${normalCount} normal`);
+          console.log(`Particle breakdown: ${explosionCount} explosion, ${sparkCount} spark, ${shockwaveCount} shockwave, ${debrisCount} debris, ${normalCount} normal`);
         }
       }
       
-      // Draw enhanced projectiles with glowing effects
+      // Draw enhanced projectiles with type-specific effects
       projectiles.forEach((projectile, index) => {
         ctx.save();
         
-        // Add projectile glow effect
-        ctx.shadowColor = projectile.owner === 'player' ? '#4facfe' : '#ff4757';
-        ctx.shadowBlur = 15;
+        // Draw motion trail first (behind projectile)
+        if (projectile.trail && projectile.trail.length > 0) {
+          for (let i = 0; i < projectile.trail.length; i++) {
+            const trailPoint = projectile.trail[i];
+            const alpha = (i + 1) / projectile.trail.length * 0.6;
+            const size = projectile.size * (0.3 + alpha * 0.7);
+            
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = projectile.color;
+            ctx.beginPath();
+            ctx.arc(trailPoint.x, trailPoint.y, size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+        
+        // Type-specific rendering effects
+        if (projectile.type === 'power') {
+          // Power projectiles have electric arcs
+          ctx.strokeStyle = projectile.color;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.7;
+          for (let i = 0; i < 3; i++) {
+            const angle = (Date.now() * 0.01 + i * Math.PI * 2 / 3) % (Math.PI * 2);
+            const radius = projectile.size + 5;
+            ctx.beginPath();
+            ctx.moveTo(projectile.x, projectile.y);
+            ctx.lineTo(
+              projectile.x + Math.cos(angle) * radius,
+              projectile.y + Math.sin(angle) * radius
+            );
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+        } else if (projectile.type === 'plasma') {
+          // Plasma projectiles have energy waves
+          ctx.strokeStyle = projectile.color;
+          ctx.lineWidth = 3;
+          ctx.globalAlpha = 0.4;
+          for (let r = projectile.size; r < projectile.size + 15; r += 5) {
+            ctx.beginPath();
+            ctx.arc(projectile.x, projectile.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+        } else if (projectile.type === 'homing') {
+          // Homing projectiles have guidance indicators
+          ctx.strokeStyle = projectile.color;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.8;
+          ctx.save();
+          ctx.translate(projectile.x, projectile.y);
+          ctx.rotate(projectile.rotation);
+          
+          // Draw guidance fins
+          for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(projectile.size + 8, 0);
+            ctx.stroke();
+            ctx.rotate(Math.PI / 2);
+          }
+          ctx.restore();
+          ctx.globalAlpha = 1;
+        }
+        
+        // Enhanced glow effect based on projectile type
+        const glowIntensity = projectile.type === 'power' ? 25 : 
+                            projectile.type === 'plasma' ? 20 : 15;
+        ctx.shadowColor = projectile.color;
+        ctx.shadowBlur = glowIntensity;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
         
-        // Projectile body with gradient
+        // Create dynamic gradient based on projectile color
         const projectileGradient = ctx.createRadialGradient(
           projectile.x, projectile.y, 0,
           projectile.x, projectile.y, projectile.size + 5
         );
         
-        if (projectile.owner === 'player') {
-          projectileGradient.addColorStop(0, '#ffffff');
-          projectileGradient.addColorStop(0.3, '#4facfe');
-          projectileGradient.addColorStop(1, '#0099ff');
-        } else {
-          projectileGradient.addColorStop(0, '#ffffff');
-          projectileGradient.addColorStop(0.3, '#ff4757');
-          projectileGradient.addColorStop(1, '#ff0000');
-        }
+        projectileGradient.addColorStop(0, '#ffffff');
+        projectileGradient.addColorStop(0.3, projectile.color);
+        projectileGradient.addColorStop(1, projectile.color + '88'); // Add transparency
         
         ctx.fillStyle = projectileGradient;
         ctx.beginPath();
         ctx.arc(projectile.x, projectile.y, projectile.size, 0, Math.PI * 2);
         ctx.fill();
         
-        // Projectile core
+        // Projectile core with pulsing effect
         ctx.shadowBlur = 0;
-        ctx.fillStyle = '#ffffff';
+        const pulseIntensity = 0.8 + Math.sin(Date.now() * 0.01) * 0.2;
+        ctx.fillStyle = `rgba(255, 255, 255, ${pulseIntensity})`;
         ctx.beginPath();
-        ctx.arc(projectile.x, projectile.y, projectile.size * 0.6, 0, Math.PI * 2);
+        ctx.arc(projectile.x, projectile.y, projectile.size * 0.5, 0, Math.PI * 2);
         ctx.fill();
         
-        // Motion trail effect
-        const trailLength = 8;
-        ctx.globalAlpha = 0.3;
-        for (let i = 1; i <= trailLength; i++) {
-          const trailX = projectile.x - (projectile.vx * i * 0.1);
-          const trailY = projectile.y - (projectile.vy * i * 0.1);
-          const trailSize = projectile.size * (1 - i / trailLength * 0.8);
-          const alpha = (trailLength - i) / trailLength * 0.5;
-          
-          ctx.globalAlpha = alpha;
-          ctx.fillStyle = projectile.owner === 'player' ? '#4facfe' : '#ff4757';
-          ctx.beginPath();
-          ctx.arc(trailX, trailY, trailSize, 0, Math.PI * 2);
-          ctx.fill();
+        // Type indicator for special projectiles
+        if (projectile.type !== 'normal') {
+          ctx.font = '10px Arial';
+          ctx.fillStyle = projectile.color;
+          ctx.textAlign = 'center';
+          ctx.fillText(projectile.type.charAt(0).toUpperCase(), projectile.x, projectile.y - projectile.size - 5);
         }
         
         ctx.restore();
       });
       
-      // GLOBAL DEBUG OVERLAY - Show particle system status ALWAYS
+      // Enhanced debug overlay with projectile and knockback info
       ctx.save();
       ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-      ctx.fillRect(canvas.width - 280, 10, 270, 120);
+      ctx.fillRect(canvas.width - 300, 10, 290, 220);
       
       ctx.fillStyle = '#00ff00';
       ctx.font = 'bold 16px Arial';
-      ctx.fillText(`PARTICLE DEBUG SYSTEM`, canvas.width - 270, 30);
+      ctx.fillText(`ENHANCED COMBAT SYSTEM`, canvas.width - 290, 30);
       
       ctx.fillStyle = '#ffff00';
       ctx.font = '14px Arial';
-      ctx.fillText(`Active Particles: ${particles.length}`, canvas.width - 270, 50);
-      ctx.fillText(`Total Created: ${gameStateRef.current.particleCreationCount || 0}`, canvas.width - 270, 70);
-      ctx.fillText(`Frame: ${gameStateRef.current.frameCount || 0}`, canvas.width - 270, 90);
+      ctx.fillText(`Active Particles: ${particles.length}`, canvas.width - 290, 50);
+      ctx.fillText(`Active Projectiles: ${projectiles.length}`, canvas.width - 290, 70);
+      ctx.fillText(`Frame: ${gameStateRef.current.frameCount || 0}`, canvas.width - 290, 90);
+      
+      // Knockback information
+      ctx.fillStyle = '#ff88ff';
+      ctx.font = '12px Arial';
+      ctx.fillText(`KNOCKBACK STATUS:`, canvas.width - 290, 110);
+      ctx.fillText(`Player velocity: ${playerRef.current.vx.toFixed(1)}`, canvas.width - 290, 125);
+      ctx.fillText(`Enemy velocity: ${enemyRef.current.vx.toFixed(1)}`, canvas.width - 290, 140);
+      
+      // Projectile type controls
+      ctx.fillStyle = '#88ffff';
+      ctx.font = '12px Arial';
+      ctx.fillText(`PROJECTILE CONTROLS:`, canvas.width - 290, 160);
+      ctx.fillText(`Q - Normal (KB: 4)`, canvas.width - 290, 175);
+      ctx.fillText(`R - Rapid (KB: 2)`, canvas.width - 290, 190);
+      ctx.fillText(`1 - Power (KB: 8)`, canvas.width - 290, 205);
+      ctx.fillText(`2 - Plasma (KB: 5)`, canvas.width - 290, 220);
+      ctx.fillText(`3 - Homing (KB: 6)`, canvas.width - 290, 235);
       
       if (particles.length > 0) {
         const types = particles.reduce((acc, p) => {
@@ -1488,7 +1563,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
           return acc;
         }, {});
         const typeStr = Object.entries(types).map(([type, count]) => `${type}:${count}`).join(' ');
-        ctx.fillText(`Types: ${typeStr}`, canvas.width - 270, 110);
+        ctx.fillText(`Particles: ${typeStr}`, canvas.width - 290, 255);
       } else {
         ctx.fillStyle = '#ff0000';
         ctx.fillText(`NO PARTICLES VISIBLE!`, canvas.width - 270, 110);
@@ -1920,11 +1995,16 @@ const SideScroller = ({ character, onBackToMenu }) => {
     }
 
     function createParticles(x, y, color, count = 4, type = 'normal') {
-      console.log(`🎨 CREATING ${count} ${type} PARTICLES at (${x}, ${y}) with color ${color}`);
+      // Only log if particles exceed reasonable limit
+      if (particles.length > 100) {
+        console.warn(`⚠️ High particle count: ${particles.length} - Creating ${count} more ${type} particles`);
+      }
       
-      // Increment creation counter for debugging
-      if (!gameStateRef.current.particleCreationCount) gameStateRef.current.particleCreationCount = 0;
-      gameStateRef.current.particleCreationCount += count;
+      // Limit total particle count to prevent performance issues
+      if (particles.length > 200) {
+        console.warn('🚫 Particle limit reached - skipping creation');
+        return;
+      }
       
       const newParticles = [];
       
@@ -1935,7 +2015,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
           // Explosive burst particles - radial spread
           const angle = (i / count) * Math.PI * 2;
           const speed = 2 + Math.random() * 4;
-          const life = 120 + Math.random() * 60; // Much longer life for debugging
+          const life = 30 + Math.random() * 20; // Optimized shorter life
           
           particle = {
             x: x + (Math.random() - 0.5) * 15,
@@ -1954,7 +2034,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
           // Electric spark particles - fast moving
           const angle = Math.random() * Math.PI * 2;
           const speed = 4 + Math.random() * 6;
-          const life = 100 + Math.random() * 50; // Much longer life for debugging
+          const life = 25 + Math.random() * 15; // Optimized shorter life
           
           particle = {
             x: x + (Math.random() - 0.5) * 10,
@@ -1964,14 +2044,14 @@ const SideScroller = ({ character, onBackToMenu }) => {
             life: life,
             maxLife: life,
             color: color,
-            size: 2 + Math.random() * 3, // Reduced from 6-14 to 2-5
+            size: 2 + Math.random() * 3,
             type: 'spark',
             trail: [], // For spark trails
-            trailLength: 4
+            trailLength: 3 // Reduced trail length
           };
         } else if (type === 'shockwave') {
           // Expanding shockwave rings
-          const life = 25 + Math.random() * 15; // Shorter life
+          const life = 15 + Math.random() * 10; // Shorter life
           
           particle = {
             x: x,
@@ -1981,13 +2061,13 @@ const SideScroller = ({ character, onBackToMenu }) => {
             life: life,
             maxLife: life,
             color: color,
-            size: 2 + Math.random() * 3, // Reduced from 5-13 to 2-5
+            size: 2 + Math.random() * 3,
             type: 'shockwave',
-            expansion: 2 + Math.random() * 3 // Slower expansion
+            expansion: 2 + Math.random() * 3
           };
         } else if (type === 'debris') {
           // Heavy debris particles - affected by gravity
-          const life = 40 + Math.random() * 20; // Shorter life
+          const life = 25 + Math.random() * 15; // Shorter life
           
           particle = {
             x: x + (Math.random() - 0.5) * 20,
@@ -2003,7 +2083,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
           };
         } else {
           // Normal particles - improved default
-          const life = 30 + Math.random() * 20; // Shorter life
+          const life = 20 + Math.random() * 15; // Shorter life
           
           particle = {
             x: x + (Math.random() - 0.5) * 20,
@@ -2013,7 +2093,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
             life: life,
             maxLife: life,
             color: color,
-            size: 3 + Math.random() * 5, // Smaller size
+            size: 3 + Math.random() * 5,
             type: 'normal'
           };
         }
@@ -2023,32 +2103,112 @@ const SideScroller = ({ character, onBackToMenu }) => {
       
       setParticles(prev => {
         const updated = [...prev, ...newParticles];
-        console.log(`✅ PARTICLES ADDED: ${prev.length} -> ${updated.length}`);
+        // Only log significant particle additions
+        if (updated.length > prev.length + 5) {
+          console.log(`✅ PARTICLES ADDED: ${prev.length} -> ${updated.length}`);
+        }
         return updated;
       });
     }
 
-    // Enhanced projectile system
-    function fireProjectile(shooter, direction) {
-      const projectileSpeed = 8;
-      const projectileSize = 6;
+    // Enhanced projectile system with multiple types
+    function fireProjectile(shooter, direction, type = 'normal') {
+      // Projectile type configurations
+      const projectileTypes = {
+        normal: {
+          speed: 8,
+          size: 6,
+          damage: 0.7,
+          life: 120,
+          color: shooter === playerRef.current ? '#4facfe' : '#ff4757',
+          gravity: 0,
+          bounce: false,
+          piercing: false,
+          homing: false
+        },
+        power: {
+          speed: 6,
+          size: 10,
+          damage: 1.2,
+          life: 150,
+          color: shooter === playerRef.current ? '#00ff88' : '#ff8800',
+          gravity: 0,
+          bounce: false,
+          piercing: true,
+          homing: false
+        },
+        rapid: {
+          speed: 12,
+          size: 4,
+          damage: 0.4,
+          life: 90,
+          color: shooter === playerRef.current ? '#ffff00' : '#ff0088',
+          gravity: 0,
+          bounce: false,
+          piercing: false,
+          homing: false
+        },
+        plasma: {
+          speed: 7,
+          size: 8,
+          damage: 0.9,
+          life: 100,
+          color: shooter === playerRef.current ? '#88ffff' : '#ff4400',
+          gravity: 0.02,
+          bounce: true,
+          piercing: false,
+          homing: false
+        },
+        homing: {
+          speed: 5,
+          size: 7,
+          damage: 0.8,
+          life: 180,
+          color: shooter === playerRef.current ? '#ff00ff' : '#00ffff',
+          gravity: 0,
+          bounce: false,
+          piercing: false,
+          homing: true
+        }
+      };
+      
+      const config = projectileTypes[type] || projectileTypes.normal;
+      const isPlayer = shooter === playerRef.current;
       
       const newProjectile = {
         x: shooter.x + (direction === 'right' ? 40 : -40),
         y: shooter.y - 40,
-        vx: direction === 'right' ? projectileSpeed : -projectileSpeed,
+        vx: direction === 'right' ? config.speed : -config.speed,
         vy: 0,
-        size: projectileSize,
-        owner: shooter === playerRef.current ? 'player' : 'enemy',
-        damage: Math.floor(shooter.attack * 0.7),
-        life: 120 // frames before disappearing
+        size: config.size,
+        type: type,
+        owner: isPlayer ? 'player' : 'enemy',
+        damage: Math.floor(shooter.attack * config.damage),
+        life: config.life,
+        maxLife: config.life,
+        color: config.color,
+        gravity: config.gravity,
+        bounce: config.bounce,
+        piercing: config.piercing,
+        homing: config.homing,
+        bounceCount: 0,
+        maxBounces: 3,
+        trail: [],
+        trailLength: type === 'plasma' ? 8 : 5,
+        rotation: 0,
+        rotationSpeed: (Math.random() - 0.5) * 0.3
       };
       
       setProjectiles(prev => [...prev, newProjectile]);
-      console.log(`🚀 Projectile fired by ${newProjectile.owner} in direction ${direction}`);
       
-      // Create muzzle flash particles
-      createParticles(newProjectile.x, newProjectile.y, '#ffffff', 3, 'spark');
+      // Enhanced muzzle flash based on projectile type
+      const muzzleColor = config.color;
+      const muzzleCount = type === 'power' ? 5 : type === 'rapid' ? 2 : 3;
+      createParticles(newProjectile.x, newProjectile.y, muzzleColor, muzzleCount, 'spark');
+      
+      if (type === 'power') {
+        createParticles(newProjectile.x, newProjectile.y, '#ffffff', 2, 'explosion');
+      }
     }
 
     function triggerCollisionAnimation(x, y) {
@@ -2066,19 +2226,22 @@ const SideScroller = ({ character, onBackToMenu }) => {
         console.log('🤝 Enemy collision effect triggered!');
       }
       
-      // MINIMAL COLLISION PARTICLE EFFECTS
+      // OPTIMIZED COLLISION PARTICLE EFFECTS
       
       // 1. Main explosion burst (minimal)
-      createParticles(x, y, '#ffff00', 1, 'explosion'); // Reduced from 2
+      createParticles(x, y, '#ffff00', 1, 'explosion');
       createParticles(x, y, '#ff8800', 1, 'explosion'); // Orange explosion
       
-      // 2. Electric sparks (minimal)
-      createParticles(x, y, '#ffffff', 1, 'spark'); // Reduced from 3
+      // 2. Electric sparks (minimal)  
+      createParticles(x, y, '#ffffff', 1, 'spark');
       
       // 3. Shockwave rings (minimal)
       createParticles(x, y, '#ffffff', 1, 'shockwave'); // White shockwaves
       
-      console.log(`ENHANCED collision animation triggered at (${x}, ${y}) - multiple particle types created!`);
+      // Reduced logging frequency
+      if (gameStateRef.current.frameCount % 30 === 0) {
+        console.log(`Collision animation at (${x}, ${y}) - optimized particles created`);
+      }
       
       // Apply stronger repelling force for more dramatic effect
       const playerX = playerRef.current.x;
@@ -2268,10 +2431,13 @@ const SideScroller = ({ character, onBackToMenu }) => {
             newParticle.rotation += particle.rotationSpeed;
             newParticle.life -= 1;
           } else if (particle.type === 'spark') {
-            // Update trail
-            newParticle.trail = [...(particle.trail || []), { x: particle.x, y: particle.y }];
-            if (newParticle.trail.length > particle.trailLength) {
-              newParticle.trail.shift();
+            // Update trail with size limit
+            if (particle.trail) {
+              newParticle.trail = [...particle.trail, { x: particle.x, y: particle.y }];
+              // Limit trail length to prevent memory issues
+              if (newParticle.trail.length > particle.trailLength) {
+                newParticle.trail.shift();
+              }
             }
             
             newParticle.x += particle.vx;
@@ -2379,21 +2545,17 @@ const SideScroller = ({ character, onBackToMenu }) => {
       // Update particles
       updateParticles();
       
-      // Test particles removed - particles now optimized for performance
-      
-      // FORCE TEST PARTICLES: Create visible particles every few seconds for debugging
-      if (gameTime % 120 === 0) { // Every 2 seconds for more frequent testing
-        console.log('🧪 FORCE CREATING VISIBLE TEST PARTICLES');
-        createParticles(600, 300, '#ff0000', 4, 'explosion');
-        createParticles(700, 250, '#00ff00', 3, 'spark');
-        createParticles(500, 350, '#0000ff', 2, 'shockwave');
-        createParticles(650, 200, '#ffff00', 2, 'debris');
-        createParticles(550, 400, '#ffffff', 5, 'normal');
+      // Optimized test particles - reduced frequency and count
+      if (gameTime % 300 === 0) { // Every 5 seconds instead of 2
+        createParticles(600, 300, '#ff0000', 2, 'explosion'); // Reduced from 4 to 2
+        createParticles(700, 250, '#00ff00', 2, 'spark'); // Reduced from 3 to 2
+        createParticles(500, 350, '#0000ff', 1, 'shockwave'); // Reduced from 2 to 1
+        createParticles(650, 200, '#ffff00', 1, 'debris'); // Reduced from 2 to 1
+        createParticles(550, 400, '#ffffff', 3, 'normal'); // Reduced from 5 to 3
       }
       
-      // ADD TEST: Create particles on every attack for debugging
-      if (playerRef.current.isAttacking) {
-        console.log('🧪 PLAYER ATTACKING - Creating test particles');
+      // Reduced frequency attack particles
+      if (playerRef.current.isAttacking && gameTime % 10 === 0) { // Only every 10 frames
         createParticles(playerRef.current.x + 50, playerRef.current.y - 50, '#ff0000', 1, 'explosion');
         createParticles(playerRef.current.x + 50, playerRef.current.y - 30, '#ffffff', 1, 'spark');
       }
@@ -2481,9 +2643,18 @@ const SideScroller = ({ character, onBackToMenu }) => {
         currentAnimation = 'idle';
       }
       
-      // Apply friction to repel force
+      // Enhanced friction system for knockback and normal movement
       if (Math.abs(vx) > PLAYER_SPEED) {
-        vx *= 0.9; // Gradually slow down repel force
+        // Apply stronger friction to knockback forces
+        vx *= 0.85; // Gradual slowdown for knockback
+        if (Math.abs(vx) < 0.5) {
+          vx = 0; // Stop small residual velocities
+        }
+      } else if (Math.abs(vx) > 0.1) {
+        // Normal movement friction
+        vx *= 0.95;
+      } else {
+        vx = 0; // Stop very small movements
       }
       
       if (newY < GROUND_Y) {
@@ -2511,20 +2682,40 @@ const SideScroller = ({ character, onBackToMenu }) => {
         x = newX;
         y = newY;
       } else {
-        // Stop movement if collision detected and trigger animation
-        if (Math.abs(vx) > 0 && Math.abs(vx) <= PLAYER_SPEED) { // Only trigger for normal movement, not repel
+        // Handle collision with different behavior for knockback vs normal movement
+        if (Math.abs(vx) > PLAYER_SPEED) {
+          // Knockback collision - allow partial movement and reduce velocity
+          const knockbackReduction = 0.6;
+          x = x + (vx * knockbackReduction); // Allow some knockback movement through collision
+          vx *= knockbackReduction; // Reduce knockback velocity
+          
+          // Trigger enhanced collision effects for knockback
           const collisionX = (playerRef.current.x + enemyRef.current.x) / 2;
           const collisionY = Math.min(playerRef.current.y, enemyRef.current.y) - 20;
           triggerCollisionAnimation(collisionX, collisionY);
-        }
-        if (Math.abs(vx) <= PLAYER_SPEED) { // Don't stop repel force
+          
+          console.log(`💥 Knockback collision - velocity reduced to ${vx.toFixed(2)}`);
+        } else if (Math.abs(vx) > 0 && Math.abs(vx) <= PLAYER_SPEED) {
+          // Normal movement collision - stop completely
+          const collisionX = (playerRef.current.x + enemyRef.current.x) / 2;
+          const collisionY = Math.min(playerRef.current.y, enemyRef.current.y) - 20;
+          triggerCollisionAnimation(collisionX, collisionY);
           vx = 0;
         }
-        y = newY; // Allow vertical movement (gravity/jump)
+        y = newY; // Always allow vertical movement (gravity/jump)
       }
       
-      // Prevent going off screen
-      x = Math.max(CHARACTER_WIDTH/2, Math.min(canvas.width - CHARACTER_WIDTH/2, x));
+      // Enhanced bounds checking with knockback consideration
+      const minX = CHARACTER_WIDTH/2;
+      const maxX = canvas.width - CHARACTER_WIDTH/2;
+      
+      if (x < minX) {
+        x = minX;
+        if (vx < 0) vx = 0; // Stop leftward knockback at left edge
+      } else if (x > maxX) {
+        x = maxX;
+        if (vx > 0) vx = 0; // Stop rightward knockback at right edge
+      }
       
       playerRef.current = { ...playerRef.current, x, y, vx, vy, onGround, currentAnimation, attackCooldown };
       setPlayer({ ...playerRef.current });
@@ -2554,9 +2745,13 @@ const SideScroller = ({ character, onBackToMenu }) => {
         enemyData.currentAnimation = 'idle';
       }
       
-      // Apply friction to enemy repel force
+      // Enhanced friction system for enemy knockback
       if (Math.abs(enemyData.vx) > 1) {
-        enemyData.vx *= 0.9;
+        // Apply stronger friction to knockback forces
+        enemyData.vx *= 0.85; // Gradual slowdown for knockback
+        if (Math.abs(enemyData.vx) < 0.5) {
+          enemyData.vx = 0; // Stop small residual velocities
+        }
       }
       
       // Only apply AI movement if not being repelled
@@ -2639,43 +2834,132 @@ const SideScroller = ({ character, onBackToMenu }) => {
         enemyData.x = enemyNewX;
         enemyData.y = enemyNewY;
       } else {
-        // Trigger collision animation if enemy was moving (normal movement, not repel)
-        if (Math.abs(enemyData.vx) > 0 && Math.abs(enemyData.vx) <= 1) {
+        // Handle collision with different behavior for knockback vs normal movement
+        if (Math.abs(enemyData.vx) > 1) {
+          // Knockback collision - allow partial movement and reduce velocity
+          const knockbackReduction = 0.6;
+          enemyData.x = enemyData.x + (enemyData.vx * knockbackReduction);
+          enemyData.vx *= knockbackReduction;
+          
+          // Trigger enhanced collision effects for knockback
           const collisionX = (playerRef.current.x + enemyData.x) / 2;
           const collisionY = Math.min(playerRef.current.y, enemyData.y) - 20;
           triggerCollisionAnimation(collisionX, collisionY);
-        }
-        if (Math.abs(enemyData.vx) <= 1) { // Don't stop repel force
+          
+          console.log(`💥 Enemy knockback collision - velocity reduced to ${enemyData.vx.toFixed(2)}`);
+        } else if (Math.abs(enemyData.vx) > 0 && Math.abs(enemyData.vx) <= 1) {
+          // Normal movement collision - stop completely
+          const collisionX = (playerRef.current.x + enemyData.x) / 2;
+          const collisionY = Math.min(playerRef.current.y, enemyData.y) - 20;
+          triggerCollisionAnimation(collisionX, collisionY);
           enemyData.vx = 0;
         }
-        enemyData.y = enemyNewY; // Allow vertical movement
+        enemyData.y = enemyNewY; // Always allow vertical movement
       }
       
-      // Prevent enemy going off screen
-      enemyData.x = Math.max(CHARACTER_WIDTH/2, Math.min(canvas.width - CHARACTER_WIDTH/2, enemyData.x));
+      // Enhanced bounds checking with knockback consideration for enemy
+      const enemyMinX = CHARACTER_WIDTH/2;
+      const enemyMaxX = canvas.width - CHARACTER_WIDTH/2;
+      
+      if (enemyData.x < enemyMinX) {
+        enemyData.x = enemyMinX;
+        if (enemyData.vx < 0) enemyData.vx = 0; // Stop leftward knockback at left edge
+      } else if (enemyData.x > enemyMaxX) {
+        enemyData.x = enemyMaxX;
+        if (enemyData.vx > 0) enemyData.vx = 0; // Stop rightward knockback at right edge
+      }
       
       enemyRef.current = enemyData;
       setEnemy({ ...enemyData });
       
-      // Update projectiles
+      // Enhanced projectile update system with physics and homing
       setProjectiles(prev => {
         const updatedProjectiles = [];
         
         for (let i = 0; i < prev.length; i++) {
           const projectile = prev[i];
           
-          // Update projectile position
+          // Update trail
+          if (projectile.trail) {
+            projectile.trail.push({ x: projectile.x, y: projectile.y });
+            if (projectile.trail.length > projectile.trailLength) {
+              projectile.trail.shift();
+            }
+          }
+          
+          // Homing behavior
+          if (projectile.homing) {
+            const target = projectile.owner === 'player' ? enemyRef.current : playerRef.current;
+            if (target && target.health > 0) {
+              const dx = target.x - projectile.x;
+              const dy = (target.y - CHARACTER_HEIGHT/2) - projectile.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              
+              if (distance > 0) {
+                const homingForce = 0.3;
+                projectile.vx += (dx / distance) * homingForce;
+                projectile.vy += (dy / distance) * homingForce;
+                
+                // Limit max speed
+                const maxSpeed = projectile.type === 'homing' ? 10 : 8;
+                const currentSpeed = Math.sqrt(projectile.vx * projectile.vx + projectile.vy * projectile.vy);
+                if (currentSpeed > maxSpeed) {
+                  projectile.vx = (projectile.vx / currentSpeed) * maxSpeed;
+                  projectile.vy = (projectile.vy / currentSpeed) * maxSpeed;
+                }
+                
+                // Update rotation for visual effect
+                projectile.rotation = Math.atan2(projectile.vy, projectile.vx);
+              }
+            }
+          }
+          
+          // Apply gravity
+          if (projectile.gravity > 0) {
+            projectile.vy += projectile.gravity;
+          }
+          
+          // Update position
           projectile.x += projectile.vx;
           projectile.y += projectile.vy;
           projectile.life--;
+          projectile.rotation += projectile.rotationSpeed;
           
-          // Check bounds and life
-          if (projectile.life <= 0 || projectile.x < 0 || projectile.x > canvas.width) {
-            console.log(`🚀 Projectile expired or left bounds`);
+          // Bouncing physics
+          if (projectile.bounce && projectile.bounceCount < projectile.maxBounces) {
+            // Ground bounce
+            if (projectile.y > GROUND_Y - projectile.size) {
+              projectile.y = GROUND_Y - projectile.size;
+              projectile.vy *= -0.7; // Energy loss on bounce
+              projectile.vx *= 0.9; // Friction
+              projectile.bounceCount++;
+              
+              // Create bounce particles
+              createParticles(projectile.x, projectile.y, projectile.color, 3, 'spark');
+            }
+            
+            // Wall bounce
+            if (projectile.x < projectile.size || projectile.x > canvas.width - projectile.size) {
+              projectile.vx *= -0.8;
+              projectile.x = projectile.x < projectile.size ? projectile.size : canvas.width - projectile.size;
+              projectile.bounceCount++;
+              
+              createParticles(projectile.x, projectile.y, projectile.color, 2, 'spark');
+            }
+          }
+          
+          // Check bounds and life (improved bounds checking)
+          if (projectile.life <= 0 || 
+              (!projectile.bounce && (projectile.x < -50 || projectile.x > canvas.width + 50 || 
+               projectile.y < -50 || projectile.y > canvas.height + 50))) {
+            // Create expiration particles for certain types
+            if (projectile.type === 'plasma' || projectile.type === 'power') {
+              createParticles(projectile.x, projectile.y, projectile.color, 2, 'explosion');
+            }
             continue; // Remove projectile
           }
           
-          // Check collision with characters
+          // Enhanced collision detection with pixel-perfect accuracy
           let hitTarget = false;
           
           if (projectile.owner === 'player') {
@@ -2695,15 +2979,57 @@ const SideScroller = ({ character, onBackToMenu }) => {
             
             if (checkCollision(projectileRect, enemyRect)) {
               hitTarget = true;
-              enemyRef.current.health = Math.max(0, enemyRef.current.health - projectile.damage);
-              console.log(`🎯 Player projectile hit enemy for ${projectile.damage} damage`);
+              const actualDamage = Math.max(1, projectile.damage);
+              enemyRef.current.health = Math.max(0, enemyRef.current.health - actualDamage);
               
-              // Create impact particles
-              createParticles(projectile.x, projectile.y, '#ff4757', 4, 'explosion');
-              createParticles(projectile.x, projectile.y, '#ffffff', 2, 'spark');
+              // Calculate knockback force based on projectile type and direction
+              const knockbackForces = {
+                normal: 4,
+                power: 8,
+                rapid: 2,
+                plasma: 5,
+                homing: 6
+              };
               
-              // Build player special meter
-              setSpecialMeter(prev => ({ ...prev, player: Math.min(100, prev.player + 5) }));
+              const baseKnockback = knockbackForces[projectile.type] || 4;
+              const knockbackDirection = projectile.vx > 0 ? 1 : -1; // Direction projectile was traveling
+              
+              // Apply horizontal knockback
+              enemyRef.current.vx += knockbackDirection * baseKnockback;
+              
+              // Apply vertical knockback (slight upward force)
+              if (enemyRef.current.onGround) {
+                enemyRef.current.vy = -3 - (baseKnockback * 0.3); // Stronger projectiles lift more
+                enemyRef.current.onGround = false;
+              } else {
+                enemyRef.current.vy -= 1 + (baseKnockback * 0.2); // Air knockback
+              }
+              
+              // Add knockback visual feedback
+              console.log(`💥 Enemy knocked back by ${projectile.type} projectile (force: ${baseKnockback})`);
+              
+              // Enhanced impact effects based on projectile type
+              const impactParticleCount = projectile.type === 'power' ? 6 : 
+                                        projectile.type === 'plasma' ? 4 : 3;
+              createParticles(projectile.x, projectile.y, projectile.color, impactParticleCount, 'explosion');
+              createParticles(projectile.x, projectile.y, '#ffffff', Math.ceil(impactParticleCount/2), 'spark');
+              
+              // Special effects for different types
+              if (projectile.type === 'power') {
+                createParticles(projectile.x, projectile.y, '#ffff00', 2, 'shockwave');
+                setScreenShake({ active: true, intensity: 12 + baseKnockback, timer: 15 });
+                // Extra knockback particles for power shots
+                createParticles(projectile.x, projectile.y, '#ff8800', 3, 'debris');
+              } else if (projectile.type === 'plasma') {
+                createParticles(projectile.x, projectile.y, projectile.color, 3, 'debris');
+              } else if (projectile.type === 'homing') {
+                // Homing projectiles create directional knockback particles
+                createParticles(projectile.x + knockbackDirection * 20, projectile.y, projectile.color, 4, 'spark');
+              }
+              
+              // Build player special meter based on damage dealt
+              const meterGain = Math.min(10, Math.floor(actualDamage / 2) + 3);
+              setSpecialMeter(prev => ({ ...prev, player: Math.min(100, prev.player + meterGain) }));
             }
           } else {
             // Enemy projectile hitting player
@@ -2722,20 +3048,61 @@ const SideScroller = ({ character, onBackToMenu }) => {
             
             if (checkCollision(projectileRect, playerRect)) {
               hitTarget = true;
-              playerRef.current.health = Math.max(0, playerRef.current.health - projectile.damage);
-              console.log(`🎯 Enemy projectile hit player for ${projectile.damage} damage`);
+              const actualDamage = Math.max(1, projectile.damage);
+              playerRef.current.health = Math.max(0, playerRef.current.health - actualDamage);
               
-              // Create impact particles
-              createParticles(projectile.x, projectile.y, '#4facfe', 4, 'explosion');
-              createParticles(projectile.x, projectile.y, '#ffffff', 2, 'spark');
+              // Calculate knockback force based on projectile type and direction
+              const knockbackForces = {
+                normal: 4,
+                power: 8,
+                rapid: 2,
+                plasma: 5,
+                homing: 6
+              };
+              
+              const baseKnockback = knockbackForces[projectile.type] || 4;
+              const knockbackDirection = projectile.vx > 0 ? 1 : -1; // Direction projectile was traveling
+              
+              // Apply horizontal knockback
+              playerRef.current.vx += knockbackDirection * baseKnockback;
+              
+              // Apply vertical knockback (slight upward force)
+              if (playerRef.current.onGround) {
+                playerRef.current.vy = -3 - (baseKnockback * 0.3); // Stronger projectiles lift more
+                playerRef.current.onGround = false;
+              } else {
+                playerRef.current.vy -= 1 + (baseKnockback * 0.2); // Air knockback
+              }
+              
+              // Add knockback visual feedback
+              console.log(`💥 Player knocked back by ${projectile.type} projectile (force: ${baseKnockback})`);
+              
+              // Enhanced impact effects
+              const impactParticleCount = projectile.type === 'power' ? 6 : 
+                                        projectile.type === 'plasma' ? 4 : 3;
+              createParticles(projectile.x, projectile.y, projectile.color, impactParticleCount, 'explosion');
+              createParticles(projectile.x, projectile.y, '#ffffff', Math.ceil(impactParticleCount/2), 'spark');
+              
+              if (projectile.type === 'power') {
+                createParticles(projectile.x, projectile.y, '#ff4400', 2, 'shockwave');
+                setScreenShake({ active: true, intensity: 10 + baseKnockback, timer: 12 });
+                // Extra knockback particles for power shots
+                createParticles(projectile.x, projectile.y, '#ff4400', 3, 'debris');
+              } else if (projectile.type === 'plasma') {
+                createParticles(projectile.x, projectile.y, projectile.color, 3, 'debris');
+              } else if (projectile.type === 'homing') {
+                // Homing projectiles create directional knockback particles
+                createParticles(projectile.x + knockbackDirection * 20, projectile.y, projectile.color, 4, 'spark');
+              }
               
               // Build enemy special meter
-              setSpecialMeter(prev => ({ ...prev, enemy: Math.min(100, prev.enemy + 5) }));
+              const meterGain = Math.min(10, Math.floor(actualDamage / 2) + 3);
+              setSpecialMeter(prev => ({ ...prev, enemy: Math.min(100, prev.enemy + meterGain) }));
             }
           }
           
-          // Keep projectile if it hasn't hit anything
-          if (!hitTarget) {
+          // Keep projectile if it hasn't hit (or if it's piercing)
+          if (!hitTarget || projectile.piercing) {
             updatedProjectiles.push(projectile);
           }
         }
@@ -2768,35 +3135,12 @@ const SideScroller = ({ character, onBackToMenu }) => {
         console.log('🔄 Game loop tick - isPaused:', isPaused, 'gameOver:', gameOver.active, 'spritesLoaded:', spritesLoaded);
         
         if (!isPaused && !gameOver.active) {
-          // Only run game logic if sprites are loaded
-          if (spritesLoaded.player && spritesLoaded.enemy) {
-            update();
-            draw();
-          } else {
-            // Show loading indicator while sprites load
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw simple loading screen
-            ctx.fillStyle = 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #16213e 100%)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#fff';
-            ctx.font = '24px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('🎮 Loading Game Assets...', canvas.width / 2, canvas.height / 2);
-            
-            ctx.font = '16px Arial';
-            ctx.fillText(`Player: ${spritesLoaded.player ? '✅' : '⏳'} Enemy: ${spritesLoaded.enemy ? '✅' : '⏳'}`, canvas.width / 2, canvas.height / 2 + 40);
-          }
+          // Always run the game, use fallback rendering if sprites not loaded
+          update();
+          draw();
         } else {
           // Game is paused or over, still draw current state
-          if (spritesLoaded.player && spritesLoaded.enemy) {
-            draw();
-          }
+          draw();
         }
       } catch (error) {
         console.error('❌ Error in game loop:', error);
@@ -2975,25 +3319,41 @@ const SideScroller = ({ character, onBackToMenu }) => {
           setCombo(prev => ({ ...prev, player: 10, timer: 300 }));
         }
       } else if ((e.key === 'c' || e.key === 'C')) {
-        // TEST: Manual enhanced particle creation
-        console.log('=== MANUAL ENHANCED PARTICLE TEST ===');
-        createParticles(400, 200, '#ffff00', 6, 'explosion');
-        createParticles(400, 200, '#ffffff', 4, 'spark');
-        createParticles(400, 200, '#ff8800', 3, 'shockwave');
-        createParticles(450, 200, '#ff0000', 8, 'debris');
-        console.log('Created enhanced test particles at center of screen');
+        // TEST: Optimized particle creation test
+        createParticles(400, 200, '#ffff00', 2, 'explosion'); // Reduced from 6 to 2
+        createParticles(400, 200, '#ffffff', 2, 'spark'); // Reduced from 4 to 2
+        createParticles(400, 200, '#ff8800', 1, 'shockwave'); // Reduced from 3 to 1
+        createParticles(450, 200, '#ff0000', 3, 'debris'); // Reduced from 8 to 3
         
       } else if ((e.key === 'q' || e.key === 'Q') && playerRef.current.attackCooldown === 0) {
-        // Left Projectile (Q key)
-        console.log('Keyboard: Left projectile fired');
-        fireProjectile(playerRef.current, playerRef.current.facing);
+        // Normal projectile (Q key)
+        console.log('Keyboard: Normal projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'normal');
         playerRef.current.attackCooldown = 20;
         
       } else if ((e.key === 'r' || e.key === 'R') && playerRef.current.attackCooldown === 0) {
-        // Right Projectile (R key)
-        console.log('Keyboard: Right projectile fired');
-        fireProjectile(playerRef.current, playerRef.current.facing);
-        playerRef.current.attackCooldown = 20;
+        // Rapid projectile (R key)
+        console.log('Keyboard: Rapid projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'rapid');
+        playerRef.current.attackCooldown = 15;
+        
+      } else if ((e.key === '1') && playerRef.current.attackCooldown === 0) {
+        // Power projectile (1 key)
+        console.log('Keyboard: Power projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'power');
+        playerRef.current.attackCooldown = 45;
+        
+      } else if ((e.key === '2') && playerRef.current.attackCooldown === 0) {
+        // Plasma projectile (2 key)
+        console.log('Keyboard: Plasma projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'plasma');
+        playerRef.current.attackCooldown = 35;
+        
+      } else if ((e.key === '3') && playerRef.current.attackCooldown === 0) {
+        // Homing projectile (3 key)
+        console.log('Keyboard: Homing projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'homing');
+        playerRef.current.attackCooldown = 60;
       }
     }
     
@@ -3359,24 +3719,52 @@ const SideScroller = ({ character, onBackToMenu }) => {
           }
         }
         
-        // Projectile controls (L2/R2 or LT/RT)
+        // Enhanced projectile controls with different types
         const leftProjectilePressed = controls.leftProjectile?.some(btn => gp.buttons[btn]?.pressed);
         const lastLeftProjectilePressed = controls.leftProjectile?.some(btn => lastGamepadState.buttons[btn]);
         
         if (leftProjectilePressed && !lastLeftProjectilePressed && playerRef.current.attackCooldown === 0) {
-          console.log(`${gamepadType} controller: Left projectile fired`);
-          fireProjectile(playerRef.current, playerRef.current.facing);
-          playerRef.current.attackCooldown = 20; // Shorter cooldown for projectiles
+          console.log(`${gamepadType} controller: Normal projectile fired`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'normal');
+          playerRef.current.attackCooldown = 20;
         }
         
-        // Handle R2/RT projectile (different from L2/LT for some controllers)
+        // Handle R2/RT for power projectile
         const rightProjectilePressed = controls.rightProjectile?.some(btn => gp.buttons[btn]?.pressed);
         const lastRightProjectilePressed = controls.rightProjectile?.some(btn => lastGamepadState.buttons[btn]);
           
         if (rightProjectilePressed && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
-          console.log(`${gamepadType} controller: Right projectile fired`);
-          fireProjectile(playerRef.current, playerRef.current.facing);
-          playerRef.current.attackCooldown = 20; // Shorter cooldown for projectiles
+          console.log(`${gamepadType} controller: Power projectile fired`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'power');
+          playerRef.current.attackCooldown = 45;
+        }
+        
+        // Face buttons for different projectile types
+        const trianglePressed = gp.buttons[3]?.pressed; // Triangle/Y
+        const lastTrianglePressed = lastGamepadState.buttons[3];
+        
+        if (trianglePressed && !lastTrianglePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: Rapid projectile fired`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'rapid');
+          playerRef.current.attackCooldown = 15;
+        }
+        
+        const squarePressed = gp.buttons[2]?.pressed; // Square/X
+        const lastSquarePressed = lastGamepadState.buttons[2];
+        
+        if (squarePressed && !lastSquarePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: Plasma projectile fired`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'plasma');
+          playerRef.current.attackCooldown = 35;
+        }
+        
+        const circlePressed = gp.buttons[1]?.pressed; // Circle/B
+        const lastCirclePressed = lastGamepadState.buttons[1];
+        
+        if (circlePressed && !lastCirclePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: Homing projectile fired`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'homing');
+          playerRef.current.attackCooldown = 60;
         }
         
         // Pause (Options/Menu button)
@@ -3483,7 +3871,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
                 minWidth: '200px'
               }}
             >
-              🏠 Main Menu {pauseGamepadNav.isSelected(1) && pauseGamepadNav.isGamepadConnected && ' �'}
+              🏠 Main Menu
             </button>
           </div>
         </div>

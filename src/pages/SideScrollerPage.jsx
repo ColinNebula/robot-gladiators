@@ -25,9 +25,28 @@ const SideScrollerPage = () => {
           setCharacters(parsed);
           console.log('✅ Game characters loaded:', parsed);
         } else {
-          console.warn('⚠️ No character data found, redirecting to character select');
-          alert('No character data found. Redirecting to character selection.');
-          navigate('/character-select');
+          console.warn('⚠️ No character data found, using default characters for testing');
+          // Provide default characters for testing
+          const defaultCharacters = {
+            player1: {
+              name: 'Test Fighter 1',
+              avatar: '/assets/images/mech2.png',
+              health: 100,
+              attack: 20,
+              defense: 15,
+              speed: 18
+            },
+            player2: {
+              name: 'Test Fighter 2', 
+              avatar: '/assets/images/mech3.png',
+              health: 100,
+              attack: 18,
+              defense: 20,
+              speed: 15
+            }
+          };
+          setCharacters(defaultCharacters);
+          console.log('🧪 Using default test characters:', defaultCharacters);
         }
       } catch (error) {
         console.error('❌ Failed to load characters for game:', error);
