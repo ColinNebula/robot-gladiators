@@ -5532,14 +5532,15 @@ const SideScroller = ({ character, onBackToMenu }) => {
             left: '0',
             right: '0',
             bottom: '0',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             borderRadius: '12px',
             color: '#fff',
-            pointerEvents: 'auto'
+            pointerEvents: 'auto',
+            paddingLeft: '40px'
           }}
           onClick={(e) => {
             console.log('Pause overlay clicked');
@@ -5548,15 +5549,15 @@ const SideScroller = ({ character, onBackToMenu }) => {
         >
           <h2 style={{ margin: '0 0 1rem 0', fontSize: '3rem', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>⏸️ PAUSED</h2>
           <p style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', opacity: 0.9 }}>Press ESC or P to resume</p>
-          <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', alignItems: 'flex-start' }}>
             <button
               onClick={handleResumeGame}
               style={{
                 padding: '12px 24px',
                 fontSize: '1.1rem',
-                backgroundColor: '#4facfe',
-                color: '#fff',
-                border: 'none',
+                backgroundColor: 'transparent',
+                color: '#4facfe',
+                border: '2px solid #4facfe',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 boxShadow: '0 4px 12px rgba(79, 172, 254, 0.3)',
@@ -5572,9 +5573,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
               style={{
                 padding: '12px 24px',
                 fontSize: '1.1rem',
-                backgroundColor: '#ff4757',
-                color: '#fff',
-                border: 'none',
+                backgroundColor: 'transparent',
+                color: '#ff4757',
+                border: '2px solid #ff4757',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 boxShadow: '0 4px 12px rgba(255, 71, 87, 0.3)',

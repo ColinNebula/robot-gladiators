@@ -241,12 +241,7 @@ const Navigation = () => {
           position: 'relative',
           zIndex: 2,
           textShadow: `0 0 20px ${theme.colors.primary}60`,
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-          // Fallback for browsers that don't support background-clip: text
-          '@supports not (background-clip: text)': {
-            color: theme.colors.primary,
-            background: 'none'
-          }
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
         }}>
           Nebula Wars
         </span>
