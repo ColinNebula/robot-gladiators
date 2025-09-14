@@ -15,22 +15,51 @@ const SPRITE_CONFIG = {
   smoothing: true,   // Enable smooth animation transitions
   shadowEnabled: true, // Enable sprite shadows
   animations: {
+    // Basic Movement
     idle: { frames: 4, speed: 15, file: 'Male_spritesheet_idle.png', loop: true, bounce: true },
-    run: { frames: 6, speed: 6, file: 'Male_spritesheet_run.png', loop: true, intensity: 'high' },
-    jump: { frames: 3, speed: 4, file: 'Male_spritesheet_run_jump.png', loop: false, easing: 'ease-out' },
+    run: { frames: 6, speed: 6, file: 'Male_spritesheet_run.png', loop: true, intensity: 'high', trail: 'speed' },
+    run_back: { frames: 6, speed: 6, file: 'Male_spritesheet_run_back.png', loop: true, intensity: 'medium' },
+    jump: { frames: 3, speed: 4, file: 'Male_spritesheet_run_jump.png', loop: false, easing: 'ease-out', glow: 'soft' },
+    wall_jump: { frames: 4, speed: 4, file: 'Male_spritesheet_wall_jump.png', loop: false, trail: true, glow: 'energy' },
+    
+    // Combat - Punches
     punch1: { frames: 4, speed: 3, file: 'Male_spritesheet_punch_1.png', loop: false, impact: true, shake: true },
     punch2: { frames: 4, speed: 3, file: 'Male_spritesheet_punch_2.png', loop: false, impact: true, shake: true },
-    punch3: { frames: 4, speed: 3, file: 'Male_spritesheet_punch_3.png', loop: false, impact: true, shake: 'heavy' },
-    punch_quad: { frames: 4, speed: 2, file: 'Male_spritesheet_punch_quad.png', loop: false, impact: true, shake: 'heavy', trail: true },
-    kick: { frames: 4, speed: 3, file: 'Male_spritesheet_kick_high.png', loop: false, impact: true, shake: true },
+    punch3: { frames: 4, speed: 3, file: 'Male_spritesheet_punch_3.png', loop: false, impact: true, shake: 'heavy', screenFlash: 'white' },
+    punch_quad: { frames: 4, speed: 2, file: 'Male_spritesheet_punch_quad.png', loop: false, impact: true, shake: 'heavy', trail: true, glow: 'power', afterimage: true },
+    punch_straight: { frames: 4, speed: 3, file: 'Male_spritesheet_punch_straight.png', loop: false, impact: true, shake: true, blur: 'motion' },
+    
+    // Combat - Kicks  
+    kick: { frames: 4, speed: 3, file: 'Male_spritesheet_kick_high.png', loop: false, impact: true, shake: true, aura: 'combat' },
     kick_low: { frames: 4, speed: 3, file: 'Male_spritesheet_kick_low.png', loop: false, impact: true },
-    kick_spin: { frames: 6, speed: 2, file: 'Male_spritesheet_kick_spin_high.png', loop: false, impact: true, shake: 'heavy', trail: true },
+    kick_spin: { frames: 6, speed: 2, file: 'Male_spritesheet_kick_spin_high.png', loop: false, impact: true, shake: 'heavy', trail: true, glow: 'energy', blur: 'spin', afterimage: true, distortion: 'spin' },
+    
+    // Defensive Moves
+    dodge: { frames: 3, speed: 3, file: 'Male_spritesheet_dodge_back.png', loop: false, blur: true, fade: 'quick' },
+    dodge_fwd: { frames: 4, speed: 4, file: 'Male_spritesheet_dodge_fwd.png', loop: false, blur: true, trail: 'dash' },
+    dodge_roll: { frames: 6, speed: 3, file: 'Male_spritesheet_dodge_roll.png', loop: false, blur: 'heavy', trail: true },
+    
+    // Environmental States
     falling: { frames: 2, speed: 12, file: 'Male_spritesheet_falling_idle.png', loop: true, sway: true },
-    landing: { frames: 3, speed: 4, file: 'Male_spritesheet_falling_landing.png', loop: false, impact: true, dust: true },
-    death: { frames: 4, speed: 10, file: 'Male_spritesheet_death_1.png', loop: false, fade: true },
-    dodge: { frames: 3, speed: 3, file: 'Male_spritesheet_dodge_back.png', loop: false, blur: true },
+    landing: { frames: 3, speed: 4, file: 'Male_spritesheet_falling_landing.png', loop: false, impact: true, dust: true, shake: 'light' },
     crouch: { frames: 3, speed: 8, file: 'Male_spritesheet_crouch_idle.png', loop: true },
-    interact: { frames: 4, speed: 6, file: 'Male_spritesheet_interact.png', loop: false, glow: true }
+    crouch_walk: { frames: 4, speed: 8, file: 'Male_spritesheet_crouch_walk.png', loop: true },
+    
+    // Death States
+    death: { frames: 4, speed: 10, file: 'Male_spritesheet_death_1.png', loop: false, fade: true, shake: 'heavy' },
+    death_2: { frames: 6, speed: 8, file: 'Male_spritesheet_death_2.png', loop: false, fade: 'slow', tint: 'dark' },
+    
+    // Special Interactions
+    interact: { frames: 4, speed: 6, file: 'Male_spritesheet_interact.png', loop: false, glow: true, bounce: 'soft' },
+    find_item: { frames: 4, speed: 8, file: 'Male_spritesheet_find_item.png', loop: false, glow: 'treasure', bounce: true },
+    push: { frames: 4, speed: 6, file: 'Male_spritesheet_push.png', loop: true, shake: 'light' },
+    pull_heavy: { frames: 4, speed: 6, file: 'Male_spritesheet_pull_heavy.png', loop: true, shake: 'medium' },
+    
+    // Climbing & Hanging
+    climb_rope: { frames: 6, speed: 8, file: 'Male_spritesheet_climb_rope.png', loop: true },
+    rope_hang: { frames: 2, speed: 15, file: 'Male_spritesheet_rope_hang.png', loop: true, sway: true },
+    wall_hang: { frames: 2, speed: 15, file: 'Male_spritesheet_wall_hang.png', loop: true },
+    edge_hang: { frames: 2, speed: 15, file: 'Male_spritesheet_edge_hang.png', loop: true, sway: 'light' }
   }
 };
 
@@ -55,19 +84,33 @@ class SpriteAnimation {
       glow: { enabled: false, color: '#ffffff', blur: 10, alpha: 0.6 },
       shake: { enabled: false, intensity: 0, duration: 0, timer: 0 },
       bounce: { enabled: false, amplitude: 2, frequency: 0.1, offset: 0 },
-      trail: { enabled: false, positions: [], maxLength: 5 },
-      fade: { enabled: false, alpha: 1.0, fadeSpeed: 0.02 },
+      trail: { enabled: false, positions: [], maxLength: 5, fadeRate: 0.2 },
+      fade: { enabled: false, alpha: 1.0, fadeSpeed: 0.02, rate: 0.1 },
       blur: { enabled: false, amount: 0 },
       scale: { current: 1.0, target: 1.0, speed: 0.1 },
       rotation: { current: 0, target: 0, speed: 0.1 },
-      tint: { enabled: false, color: '#ffffff', intensity: 0 }
+      tint: { enabled: false, color: '#ffffff', intensity: 0 },
+      
+      // New advanced effects
+      afterimage: { enabled: false, positions: [], maxLength: 3, opacity: 0.3 },
+      screenFlash: { enabled: false, color: '#ffffff', intensity: 0, duration: 0 },
+      aura: { enabled: false, color: '#00ffff', radius: 50, pulse: true, intensity: 0.5 },
+      distortion: { enabled: false, amount: 0, type: 'wave' }
     };
     
-    // Animation timing enhancements
+    // Animation timing enhancements with transition system
     this.timing = {
       frameInterpolation: 0,
       easingFunction: 'linear',
-      transitionSpeed: 0.15
+      transitionSpeed: 0.15,
+      
+      // Animation transition system
+      transitionActive: false,
+      transitionProgress: 0,
+      transitionDuration: 0.3,
+      previousAnimation: null,
+      previousFrame: 0,
+      blendMode: 'crossfade'
     };
     
     this.image.onload = () => {
@@ -82,8 +125,16 @@ class SpriteAnimation {
     };
   }
   
-  setAnimation(animationName, forceRestart = false) {
+  setAnimation(animationName, forceRestart = false, enableTransition = true) {
     if (this.currentAnimation !== animationName || forceRestart) {
+      // Store previous animation data for smooth transitions
+      if (enableTransition && this.currentAnimation !== animationName) {
+        this.timing.previousAnimation = this.currentAnimation;
+        this.timing.previousFrame = this.currentFrame;
+        this.timing.transitionActive = true;
+        this.timing.transitionProgress = 0;
+      }
+      
       this.previousAnimation = this.currentAnimation;
       this.currentAnimation = animationName;
       this.currentFrame = 0;
@@ -96,7 +147,7 @@ class SpriteAnimation {
       // Load the specific animation image if not already loaded
       this.loadAnimationImage(animationName);
       
-      console.log(`🎭 Animation changed: ${this.previousAnimation} → ${animationName}`);
+      console.log(`🎭 Animation changed: ${this.previousAnimation} → ${animationName}${this.timing.transitionActive ? ' (with transition)' : ''}`);
     }
   }
   
@@ -122,21 +173,179 @@ class SpriteAnimation {
     if (anim.trail) {
       this.effects.trail.enabled = true;
       this.effects.trail.positions = [];
+      
+      // Enhanced trail types
+      switch (anim.trail) {
+        case 'speed':
+          this.effects.trail.maxLength = 8;
+          this.effects.trail.fadeRate = 0.15;
+          break;
+        case 'dash':
+          this.effects.trail.maxLength = 12;
+          this.effects.trail.fadeRate = 0.2;
+          break;
+        case 'spin':
+          this.effects.trail.maxLength = 15;
+          this.effects.trail.fadeRate = 0.1;
+          break;
+        case true:
+        default:
+          this.effects.trail.maxLength = 5;
+          this.effects.trail.fadeRate = 0.2;
+          break;
+      }
     }
     
     if (anim.glow) {
       this.effects.glow.enabled = true;
-      this.effects.glow.color = anim.glowColor || '#4facfe';
+      
+      // Enhanced glow types with different colors and intensities
+      switch (anim.glow) {
+        case 'soft':
+          this.effects.glow.color = '#87ceeb';
+          this.effects.glow.blur = 8;
+          this.effects.glow.alpha = 0.4;
+          break;
+        case 'energy':
+          this.effects.glow.color = '#00ffff';
+          this.effects.glow.blur = 12;
+          this.effects.glow.alpha = 0.7;
+          break;
+        case 'power':
+          this.effects.glow.color = '#ff4500';
+          this.effects.glow.blur = 15;
+          this.effects.glow.alpha = 0.8;
+          break;
+        case 'treasure':
+          this.effects.glow.color = '#ffd700';
+          this.effects.glow.blur = 10;
+          this.effects.glow.alpha = 0.6;
+          break;
+        case true:
+        default:
+          this.effects.glow.color = anim.glowColor || '#4facfe';
+          this.effects.glow.blur = 10;
+          this.effects.glow.alpha = 0.6;
+          break;
+      }
     }
     
     if (anim.blur) {
       this.effects.blur.enabled = true;
-      this.effects.blur.amount = 2;
+      
+      // Enhanced blur types  
+      switch (anim.blur) {
+        case 'motion':
+          this.effects.blur.amount = 3;
+          break;
+        case 'spin':
+          this.effects.blur.amount = 4;
+          break;
+        case 'heavy':
+          this.effects.blur.amount = 5;
+          break;
+        case true:
+        default:
+          this.effects.blur.amount = 2;
+          break;
+      }
     }
     
     if (anim.fade) {
       this.effects.fade.enabled = true;
       this.effects.fade.alpha = 1.0;
+      
+      // Enhanced fade types
+      switch (anim.fade) {
+        case 'quick':
+          this.effects.fade.rate = 0.15;
+          break;
+        case 'slow':
+          this.effects.fade.rate = 0.05;
+          break;
+        case true:
+        default:
+          this.effects.fade.rate = 0.1;
+          break;
+      }
+    }
+    
+    if (anim.bounce) {
+      this.effects.bounce.enabled = true;
+      
+      // Enhanced bounce types
+      switch (anim.bounce) {
+        case 'soft':
+          this.effects.bounce.amount = 0.05;
+          this.effects.bounce.speed = 0.15;
+          break;
+        case true:
+        default:
+          this.effects.bounce.amount = 0.1;
+          this.effects.bounce.speed = 0.2;
+          break;
+      }
+    }
+    
+    if (anim.afterimage) {
+      this.effects.afterimage.enabled = true;
+      this.effects.afterimage.positions = [];
+      this.effects.afterimage.maxLength = 3;
+      this.effects.afterimage.opacity = 0.3;
+    }
+    
+    if (anim.screenFlash) {
+      this.effects.screenFlash.enabled = true;
+      switch (anim.screenFlash) {
+        case 'white':
+          this.effects.screenFlash.color = '#ffffff';
+          this.effects.screenFlash.intensity = 0.8;
+          break;
+        case 'red':
+          this.effects.screenFlash.color = '#ff0000';
+          this.effects.screenFlash.intensity = 0.6;
+          break;
+        default:
+          this.effects.screenFlash.color = '#ffffff';
+          this.effects.screenFlash.intensity = 0.5;
+          break;
+      }
+      this.effects.screenFlash.duration = 0.2;
+    }
+    
+    if (anim.aura) {
+      this.effects.aura.enabled = true;
+      switch (anim.aura) {
+        case 'combat':
+          this.effects.aura.color = '#ff4500';
+          this.effects.aura.radius = 40;
+          break;
+        case 'energy':
+          this.effects.aura.color = '#00ffff';
+          this.effects.aura.radius = 60;
+          break;
+        default:
+          this.effects.aura.color = '#ffffff';
+          this.effects.aura.radius = 50;
+          break;
+      }
+    }
+    
+    if (anim.distortion) {
+      this.effects.distortion.enabled = true;
+      switch (anim.distortion) {
+        case 'spin':
+          this.effects.distortion.type = 'spin';
+          this.effects.distortion.amount = 2;
+          break;
+        case 'wave':
+          this.effects.distortion.type = 'wave';
+          this.effects.distortion.amount = 1;
+          break;
+        default:
+          this.effects.distortion.amount = 1;
+          break;
+      }
     }
     
     if (anim.intensity === 'high') {
@@ -153,6 +362,12 @@ class SpriteAnimation {
     this.effects.fade.enabled = false;
     this.effects.scale.target = 1.0;
     this.effects.rotation.target = 0;
+    
+    // Reset new advanced effects
+    this.effects.afterimage.enabled = false;
+    this.effects.screenFlash.enabled = false;
+    this.effects.aura.enabled = false;
+    this.effects.distortion.enabled = false;
   }
   
   loadAnimationImage(animationName) {
@@ -190,6 +405,11 @@ class SpriteAnimation {
     if (this.frameCounter >= anim.speed) {
       this.currentFrame++;
       this.frameCounter = 0;
+      
+      // Trigger sprite-based particles on frame updates
+      if (this.particleCallback && this.lastX !== undefined && this.lastY !== undefined) {
+        this.triggerParticles(this.particleCallback, this.lastX, this.lastY);
+      }
       
       // Handle animation completion
       if (this.currentFrame >= anim.frames) {
@@ -247,6 +467,39 @@ class SpriteAnimation {
     if (this.effects.trail.enabled) {
       // Trail positions will be updated in draw method
     }
+    
+    // Update afterimage effect
+    if (this.effects.afterimage.enabled) {
+      // Afterimage positions will be updated in draw method similar to trails
+    }
+    
+    // Update screen flash effect
+    if (this.effects.screenFlash.enabled) {
+      this.effects.screenFlash.duration -= 0.016; // Assuming 60fps
+      if (this.effects.screenFlash.duration <= 0) {
+        this.effects.screenFlash.enabled = false;
+      }
+    }
+    
+    // Update aura effect (pulse animation handled in draw)
+    if (this.effects.aura.enabled) {
+      // Aura pulse is handled in draw method using time-based calculation
+    }
+    
+    // Update distortion effect
+    if (this.effects.distortion.enabled) {
+      // Distortion effects will be applied during rendering
+    }
+    
+    // Update animation transitions
+    if (this.timing.transitionActive) {
+      this.timing.transitionProgress += 1 / (this.timing.transitionDuration * 60); // Assuming 60fps
+      if (this.timing.transitionProgress >= 1) {
+        this.timing.transitionActive = false;
+        this.timing.transitionProgress = 1;
+        this.timing.previousAnimation = null;
+      }
+    }
   }
   
   isAnimationComplete() {
@@ -254,6 +507,10 @@ class SpriteAnimation {
   }
   
   draw(ctx, x, y, flipX = false) {
+    // Store position for particle triggering
+    this.lastX = x;
+    this.lastY = y;
+    
     const currentImage = this.loadedImages.get(this.currentAnimation) || this.image;
     
     if (!currentImage || !currentImage.complete || currentImage.naturalWidth === 0) {
@@ -296,10 +553,27 @@ class SpriteAnimation {
       if (this.effects.trail.positions.length > this.effects.trail.maxLength) {
         this.effects.trail.positions.shift();
       }
-      // Fade trail positions
+      // Fade trail positions using enhanced fade rate
       this.effects.trail.positions.forEach((pos, index) => {
-        pos.alpha = (index + 1) / this.effects.trail.positions.length * 0.5;
+        const baseAlpha = (index + 1) / this.effects.trail.positions.length;
+        pos.alpha = baseAlpha * (1 - this.effects.trail.fadeRate);
       });
+    }
+    
+    // Update afterimage positions
+    if (this.effects.afterimage.enabled) {
+      // Only add new position every few frames to create distinct afterimages
+      if (this.frameTimer % 3 === 0) {
+        this.effects.afterimage.positions.push({ 
+          x: effectX, 
+          y: effectY, 
+          frame: this.currentFrame,
+          alpha: this.effects.afterimage.opacity 
+        });
+        if (this.effects.afterimage.positions.length > this.effects.afterimage.maxLength) {
+          this.effects.afterimage.positions.shift();
+        }
+      }
     }
     
     // Calculate source coordinates for current frame
@@ -378,12 +652,80 @@ class SpriteAnimation {
         ctx.restore();
       }
       
-      // Draw main sprite
-      ctx.drawImage(
-        currentImage,
-        sourceX, sourceY, frameWidth, frameHeight,
-        effectX, effectY - renderHeight, renderWidth, renderHeight
-      );
+      // Draw afterimage effect
+      if (this.effects.afterimage.enabled) {
+        this.effects.afterimage.positions.forEach((pos, index) => {
+          if (index < this.effects.afterimage.positions.length - 1) {
+            ctx.save();
+            ctx.globalAlpha = this.effects.afterimage.opacity * (index + 1) / this.effects.afterimage.positions.length;
+            ctx.filter = 'blur(1px)';
+            ctx.drawImage(
+              currentImage,
+              sourceX, sourceY, frameWidth, frameHeight,
+              pos.x, pos.y - renderHeight, renderWidth, renderHeight
+            );
+            ctx.restore();
+          }
+        });
+      }
+      
+      // Draw aura effect
+      if (this.effects.aura.enabled) {
+        ctx.save();
+        const pulseIntensity = this.effects.aura.pulse ? 
+          0.5 + 0.5 * Math.sin(Date.now() * 0.01) : 1;
+        const gradient = ctx.createRadialGradient(
+          effectX + renderWidth/2, effectY - renderHeight/2, 0,
+          effectX + renderWidth/2, effectY - renderHeight/2, this.effects.aura.radius
+        );
+        gradient.addColorStop(0, this.effects.aura.color + Math.floor(this.effects.aura.intensity * pulseIntensity * 255).toString(16).padStart(2, '0'));
+        gradient.addColorStop(1, this.effects.aura.color + '00');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(
+          effectX - this.effects.aura.radius/2, 
+          effectY - renderHeight - this.effects.aura.radius/2,
+          renderWidth + this.effects.aura.radius,
+          renderHeight + this.effects.aura.radius
+        );
+        ctx.restore();
+      }
+      
+      // Draw main sprite with transition blending
+      if (this.timing.transitionActive && this.timing.previousAnimation) {
+        // Draw previous animation frame with decreasing alpha
+        const previousImage = this.loadedImages.get(this.timing.previousAnimation);
+        if (previousImage && previousImage.complete) {
+          const prevAnim = this.config.animations[this.timing.previousAnimation];
+          if (prevAnim) {
+            ctx.save();
+            ctx.globalAlpha = 1 - this.timing.transitionProgress;
+            const prevSourceX = this.timing.previousFrame * frameWidth;
+            ctx.drawImage(
+              previousImage,
+              prevSourceX, sourceY, frameWidth, frameHeight,
+              effectX, effectY - renderHeight, renderWidth, renderHeight
+            );
+            ctx.restore();
+          }
+        }
+        
+        // Draw current animation frame with increasing alpha
+        ctx.save();
+        ctx.globalAlpha = this.timing.transitionProgress;
+        ctx.drawImage(
+          currentImage,
+          sourceX, sourceY, frameWidth, frameHeight,
+          effectX, effectY - renderHeight, renderWidth, renderHeight
+        );
+        ctx.restore();
+      } else {
+        // Normal drawing without transition
+        ctx.drawImage(
+          currentImage,
+          sourceX, sourceY, frameWidth, frameHeight,
+          effectX, effectY - renderHeight, renderWidth, renderHeight
+        );
+      }
       
       // Draw debug info
       if (window.DEBUG_SPRITES) {
@@ -538,6 +880,273 @@ class SpriteAnimation {
     }
   }
   
+  getScreenFlashData() {
+    if (this.effects.screenFlash.enabled) {
+      return {
+        color: this.effects.screenFlash.color,
+        intensity: this.effects.screenFlash.intensity,
+        duration: this.effects.screenFlash.duration
+      };
+    }
+    return null;
+  }
+  
+  triggerScreenFlash(color = '#ffffff', intensity = 0.5, duration = 0.2) {
+    this.effects.screenFlash.enabled = true;
+    this.effects.screenFlash.color = color;
+    this.effects.screenFlash.intensity = intensity;
+    this.effects.screenFlash.duration = duration;
+  }
+  
+  // Dynamic scaling effects for different game states
+  setDynamicScaling(scalingType, intensity = 1.0, duration = 1000) {
+    switch(scalingType) {
+      case 'powerup':
+        this.effects.scale.target = 1.0 + (0.3 * intensity);
+        this.effects.glow.enabled = true;
+        this.effects.glow.color = '#ffd700';
+        this.effects.glow.alpha = 0.8 * intensity;
+        setTimeout(() => {
+          this.effects.scale.target = 1.0;
+          this.effects.glow.enabled = false;
+        }, duration);
+        break;
+        
+      case 'damage_reduction':
+        this.effects.scale.target = 0.8 + (0.2 * (1 - intensity));
+        this.effects.tint.enabled = true;
+        this.effects.tint.color = '#4169e1';
+        setTimeout(() => {
+          this.effects.scale.target = 1.0;
+          this.effects.tint.enabled = false;
+        }, duration);
+        break;
+        
+      case 'berserker_mode':
+        this.effects.scale.target = 1.2 + (0.3 * intensity);
+        this.effects.glow.enabled = true;
+        this.effects.glow.color = '#ff0000';
+        this.effects.shake.enabled = true;
+        this.effects.shake.intensity = 2 * intensity;
+        this.effects.shake.duration = duration / 16; // Convert to frames
+        this.effects.shake.timer = duration / 16;
+        break;
+        
+      case 'stealth_mode':
+        this.effects.scale.target = 0.9;
+        this.effects.fade.enabled = true;
+        this.effects.fade.alpha = 0.5 + (0.3 * (1 - intensity));
+        break;
+        
+      case 'giant_mode':
+        this.effects.scale.target = 1.5 + (0.5 * intensity);
+        this.effects.glow.enabled = true;
+        this.effects.glow.color = '#00ff00';
+        this.effects.shake.enabled = true;
+        this.effects.shake.intensity = 3;
+        break;
+        
+      case 'mini_mode':
+        this.effects.scale.target = 0.5 + (0.3 * intensity);
+        this.effects.bounce.enabled = true;
+        this.effects.bounce.amount = 0.15;
+        break;
+        
+      case 'critical_hit':
+        // Temporary scaling pulse for critical hits
+        const originalScale = this.effects.scale.target;
+        this.effects.scale.target = originalScale + 0.4;
+        this.effects.glow.enabled = true;
+        this.effects.glow.color = '#ffff00';
+        this.triggerScreenFlash('#ffff00', 0.6, 0.15);
+        setTimeout(() => {
+          this.effects.scale.target = originalScale;
+          this.effects.glow.enabled = false;
+        }, 200);
+        break;
+    }
+  }
+  
+  // Contextual scaling based on health/state
+  updateContextualScaling(health, maxHealth, specialStates = {}) {
+    const healthRatio = health / maxHealth;
+    
+    // Scale down as health decreases
+    if (healthRatio < 0.3) {
+      this.effects.scale.target = 0.85 + (healthRatio * 0.15);
+      if (!this.effects.tint.enabled) {
+        this.effects.tint.enabled = true;
+        this.effects.tint.color = '#ff6666';
+        this.effects.tint.intensity = 1 - healthRatio;
+      }
+    } else {
+      this.effects.scale.target = 1.0;
+      if (this.effects.tint.enabled && this.effects.tint.color === '#ff6666') {
+        this.effects.tint.enabled = false;
+      }
+    }
+    
+    // Apply special state modifications
+    if (specialStates.invulnerable) {
+      this.effects.scale.target = Math.max(this.effects.scale.target, 1.1);
+      this.effects.glow.enabled = true;
+      this.effects.glow.color = '#ffffff';
+    }
+    
+    if (specialStates.charging) {
+      this.effects.scale.target += 0.1 * Math.sin(Date.now() * 0.01);
+    }
+    
+    if (specialStates.stunned) {
+      this.effects.scale.target *= 0.9;
+      this.effects.shake.enabled = true;
+      this.effects.shake.intensity = 1;
+    }
+  }
+  
+  // Sprite-triggered particle effects
+  triggerParticles(particleCallback, x, y) {
+    if (!particleCallback) return;
+    
+    const anim = this.config.animations[this.currentAnimation];
+    if (!anim) return;
+    
+    // Trigger particles based on animation type and current frame
+    switch(this.currentAnimation) {
+      case 'punch1':
+      case 'punch2':
+      case 'punch3':
+        if (this.currentFrame === 2) { // Impact frame
+          particleCallback('impact', x + 40, y - 60, { 
+            count: 8, 
+            color: '#ffaa00',
+            spread: 45 
+          });
+        }
+        break;
+        
+      case 'punch_quad':
+        if (this.currentFrame === 1 || this.currentFrame === 3) {
+          particleCallback('energy', x + 30, y - 50, { 
+            count: 12, 
+            color: '#ff4500',
+            spread: 60,
+            intensity: 'high'
+          });
+        }
+        break;
+        
+      case 'kick':
+      case 'kick_low':
+        if (this.currentFrame === 2) {
+          particleCallback('impact', x + 35, y - 40, { 
+            count: 6, 
+            color: '#00aaff',
+            spread: 30 
+          });
+        }
+        break;
+        
+      case 'kick_spin':
+        if (this.currentFrame >= 2 && this.currentFrame <= 4) {
+          particleCallback('spiral', x + 25, y - 50, { 
+            count: 4, 
+            color: '#00ffff',
+            rotationSpeed: 5
+          });
+        }
+        break;
+        
+      case 'run':
+        if (this.currentFrame === 0 || this.currentFrame === 3) {
+          particleCallback('dust', x, y, { 
+            count: 2, 
+            color: '#cccccc',
+            spread: 15 
+          });
+        }
+        break;
+        
+      case 'jump':
+        if (this.currentFrame === 0) {
+          particleCallback('dust', x, y + 10, { 
+            count: 5, 
+            color: '#dddddd',
+            spread: 25,
+            velocity: { x: 0, y: 1 }
+          });
+        }
+        break;
+        
+      case 'landing':
+        if (this.currentFrame === 0) {
+          particleCallback('impact', x, y, { 
+            count: 8, 
+            color: '#aaaaaa',
+            spread: 50,
+            intensity: 'medium'
+          });
+        }
+        break;
+        
+      case 'dodge_roll':
+        particleCallback('trail', x, y - 30, { 
+          count: 2, 
+          color: '#ffffff',
+          alpha: 0.3,
+          speed: 'fast'
+        });
+        break;
+        
+      case 'find_item':
+        if (this.currentFrame === 2) {
+          particleCallback('sparkle', x, y - 40, { 
+            count: 10, 
+            color: '#ffd700',
+            spread: 30,
+            twinkle: true
+          });
+        }
+        break;
+        
+      case 'death_1':
+      case 'death_2':
+        if (this.currentFrame === 1) {
+          particleCallback('explosion', x, y - 30, { 
+            count: 15, 
+            color: '#ff0000',
+            spread: 90,
+            intensity: 'high'
+          });
+        }
+        break;
+    }
+    
+    // Special effect-based particles
+    if (this.effects.glow.enabled && this.currentFrame % 2 === 0) {
+      particleCallback('glow', x, y - 30, { 
+        count: 3, 
+        color: this.effects.glow.color,
+        alpha: 0.4,
+        size: 'small'
+      });
+    }
+    
+    if (this.effects.aura.enabled) {
+      particleCallback('aura', x, y - 30, { 
+        count: 2, 
+        color: this.effects.aura.color,
+        radius: this.effects.aura.radius,
+        pulse: this.effects.aura.pulse
+      });
+    }
+  }
+  
+  // Register particle callback for automatic triggering
+  setParticleCallback(callback) {
+    this.particleCallback = callback;
+  }
+  
   stopAllEffects() {
     this.resetEffects();
   }
@@ -560,6 +1169,10 @@ const SideScroller = ({ character, onBackToMenu }) => {
   const backgroundStars = useRef([]);
   const backgroundClouds = useRef([]);
   const backgroundDebris = useRef([]);
+  const backgroundBuildings = useRef([]);
+  const backgroundLights = useRef([]);
+  const weatherEffects = useRef({ rain: [], fog: [], wind: 0 });
+  const atmosphericLayers = useRef({ near: [], far: [], particles: [] });
   
   // Enable sprite debugging via console: window.DEBUG_SPRITES = true
   useEffect(() => {
@@ -570,47 +1183,169 @@ const SideScroller = ({ character, onBackToMenu }) => {
     initializeBackgroundElements();
   }, []);
   
-  // Initialize atmospheric background elements
+  // Initialize realistic atmospheric background elements
   function initializeBackgroundElements() {
-    // Create stars
+    // Create enhanced starfield
     backgroundStars.current = [];
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 200; i++) {
       backgroundStars.current.push({
         x: Math.random() * 1200,
         y: Math.random() * 300,
-        size: Math.random() * 2 + 0.5,
-        brightness: Math.random() * 0.8 + 0.2,
-        twinkleSpeed: Math.random() * 0.02 + 0.005,
-        twinkleOffset: Math.random() * Math.PI * 2
+        size: Math.random() * 3 + 0.3,
+        brightness: Math.random() * 1.0 + 0.1,
+        twinkleSpeed: Math.random() * 0.03 + 0.005,
+        twinkleOffset: Math.random() * Math.PI * 2,
+        color: ['#ffffff', '#fff8dc', '#fffacd', '#e6e6fa', '#f0f8ff'][Math.floor(Math.random() * 5)],
+        layer: Math.random() * 3 // Depth layers
       });
     }
     
-    // Create distant clouds
+    // Create realistic city buildings
+    backgroundBuildings.current = [];
+    for (let i = 0; i < 25; i++) {
+      const height = Math.random() * 200 + 80;
+      const width = Math.random() * 60 + 40;
+      backgroundBuildings.current.push({
+        x: i * 50 - 100,
+        y: 500 - height,
+        width: width,
+        height: height,
+        type: ['residential', 'office', 'industrial', 'skyscraper'][Math.floor(Math.random() * 4)],
+        windows: generateBuildingWindows(width, height),
+        color: ['#1a1a2e', '#16213e', '#0f3460', '#533483'][Math.floor(Math.random() * 4)],
+        lights: Math.random() > 0.3,
+        antenna: Math.random() > 0.7,
+        layer: Math.floor(Math.random() * 3) + 1 // 1-3 depth layers
+      });
+    }
+    
+    // Create atmospheric clouds with weather
     backgroundClouds.current = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 12; i++) {
       backgroundClouds.current.push({
-        x: Math.random() * 1400 - 100,
-        y: Math.random() * 200 + 50,
-        width: Math.random() * 200 + 100,
-        height: Math.random() * 50 + 30,
-        speed: Math.random() * 0.2 + 0.1,
-        opacity: Math.random() * 0.3 + 0.1
+        x: Math.random() * 1600 - 200,
+        y: Math.random() * 150 + 30,
+        width: Math.random() * 300 + 150,
+        height: Math.random() * 80 + 40,
+        speed: Math.random() * 0.3 + 0.1,
+        opacity: Math.random() * 0.4 + 0.1,
+        layer: Math.floor(Math.random() * 3),
+        type: ['cumulus', 'stratus', 'storm'][Math.floor(Math.random() * 3)],
+        density: Math.random() * 0.8 + 0.2
       });
     }
     
-    // Create floating debris
+    // Create detailed floating debris and particles
     backgroundDebris.current = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 35; i++) {
       backgroundDebris.current.push({
         x: Math.random() * 1200,
         y: Math.random() * 400,
-        size: Math.random() * 3 + 1,
-        speedX: (Math.random() - 0.5) * 0.5,
-        speedY: (Math.random() - 0.5) * 0.3,
+        size: Math.random() * 4 + 0.5,
+        speedX: (Math.random() - 0.5) * 0.8,
+        speedY: (Math.random() - 0.5) * 0.4,
         rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.02,
-        opacity: Math.random() * 0.4 + 0.1,
-        color: ['#444', '#555', '#666', '#777'][Math.floor(Math.random() * 4)]
+        rotationSpeed: (Math.random() - 0.5) * 0.03,
+        opacity: Math.random() * 0.6 + 0.1,
+        type: ['metal', 'paper', 'plastic', 'dust', 'spark'][Math.floor(Math.random() * 5)],
+        color: getDebrisColor(),
+        layer: Math.floor(Math.random() * 3)
+      });
+    }
+    
+    // Initialize weather effects
+    initializeWeatherEffects();
+    
+    // Initialize atmospheric lighting
+    initializeLightingSystem();
+  }
+  
+  // Generate realistic building windows
+  function generateBuildingWindows(width, height) {
+    const windows = [];
+    const windowWidth = 8;
+    const windowHeight = 12;
+    const spacing = 4;
+    
+    for (let y = spacing; y < height - windowHeight; y += windowHeight + spacing) {
+      for (let x = spacing; x < width - windowWidth; x += windowWidth + spacing) {
+        windows.push({
+          x: x,
+          y: y,
+          width: windowWidth,
+          height: windowHeight,
+          lit: Math.random() > 0.4,
+          brightness: Math.random() * 0.8 + 0.2,
+          color: ['#ffeb3b', '#ff9800', '#2196f3', '#4caf50'][Math.floor(Math.random() * 4)]
+        });
+      }
+    }
+    return windows;
+  }
+  
+  // Get appropriate debris color based on type
+  function getDebrisColor() {
+    const colors = {
+      metal: ['#707070', '#808080', '#606060', '#909090'],
+      paper: ['#f5f5f5', '#e8e8e8', '#fafafa', '#f0f0f0'],
+      plastic: ['#ff5722', '#2196f3', '#4caf50', '#9c27b0'],
+      dust: ['#8d6e63', '#6d4c41', '#5d4037', '#4e342e'],
+      spark: ['#ffeb3b', '#ffc107', '#ff9800', '#ff5722']
+    };
+    const types = Object.keys(colors);
+    const type = types[Math.floor(Math.random() * types.length)];
+    const colorArray = colors[type];
+    return colorArray[Math.floor(Math.random() * colorArray.length)];
+  }
+  
+  // Initialize dynamic weather system
+  function initializeWeatherEffects() {
+    weatherEffects.current = {
+      rain: [],
+      fog: [],
+      wind: Math.random() * 2 - 1,
+      intensity: Math.random() * 0.3,
+      type: ['clear', 'light_rain', 'fog', 'storm'][Math.floor(Math.random() * 4)]
+    };
+    
+    // Create rain particles
+    for (let i = 0; i < 100; i++) {
+      weatherEffects.current.rain.push({
+        x: Math.random() * 1400,
+        y: Math.random() * 600,
+        speed: Math.random() * 5 + 3,
+        length: Math.random() * 15 + 5,
+        opacity: Math.random() * 0.6 + 0.2
+      });
+    }
+    
+    // Create fog layers
+    for (let i = 0; i < 8; i++) {
+      weatherEffects.current.fog.push({
+        x: Math.random() * 1400 - 200,
+        y: Math.random() * 200 + 300,
+        width: Math.random() * 400 + 200,
+        height: Math.random() * 100 + 50,
+        speed: Math.random() * 0.2 + 0.05,
+        opacity: Math.random() * 0.3 + 0.1
+      });
+    }
+  }
+  
+  // Initialize dynamic lighting system
+  function initializeLightingSystem() {
+    backgroundLights.current = [];
+    
+    // Street lights and city glow
+    for (let i = 0; i < 15; i++) {
+      backgroundLights.current.push({
+        x: Math.random() * 1200,
+        y: Math.random() * 100 + 400,
+        radius: Math.random() * 50 + 30,
+        intensity: Math.random() * 0.6 + 0.2,
+        color: ['#ffeb3b', '#ff9800', '#2196f3'][Math.floor(Math.random() * 3)],
+        flicker: Math.random() > 0.8,
+        type: ['street', 'neon', 'window'][Math.floor(Math.random() * 3)]
       });
     }
   }
@@ -657,7 +1392,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [spritesLoaded, setSpritesLoaded] = useState({ player: false, enemy: false });
   const [gameOver, setGameOver] = useState({ active: false, winner: null, message: '' });
-  const [particles, setParticles] = useState([]);
+  const particlesRef = useRef([]);
   const [combo, setCombo] = useState({ player: 0, enemy: 0, timer: 0 });
   const [specialMeter, setSpecialMeter] = useState({ player: 0, enemy: 0 });
   const [powerUps, setPowerUps] = useState([]);
@@ -736,6 +1471,25 @@ const SideScroller = ({ character, onBackToMenu }) => {
     console.log('Preloading all animations...');
     playerSpriteRef.current.preloadAnimations();
     enemySpriteRef.current.preloadAnimations();
+    
+    // Set up particle callbacks for sprite-triggered effects
+    const createParticleCallback = (isPlayer = true) => (type, x, y, options = {}) => {
+      const defaultOptions = {
+        count: 5,
+        color: '#ffffff',
+        spread: 30,
+        intensity: 'medium',
+        ...options
+      };
+      
+      console.log(`🎨 Sprite-triggered particles: ${type} at (${x}, ${y}) for ${isPlayer ? 'player' : 'enemy'}`);
+      
+      // Call createParticles with correct parameter order: (x, y, color, count, type)
+      createParticles(x, y, defaultOptions.color, defaultOptions.count, type);
+    };
+    
+    playerSpriteRef.current.setParticleCallback(createParticleCallback(true));
+    enemySpriteRef.current.setParticleCallback(createParticleCallback(false));
     
     // Add debugging to check what images are being requested
     console.log('Sprite paths being loaded:');
@@ -878,7 +1632,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
       // TEST: Draw current particle count (small display)
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.font = '12px Arial';
-      ctx.fillText(`Particles: ${particles.length}`, 20, 25);
+      ctx.fillText(`Particles: ${particlesRef.current.length}`, 20, 25);
       
       // Draw player using enhanced sprite animation with glow effects
       ctx.save();
@@ -1265,16 +2019,16 @@ const SideScroller = ({ character, onBackToMenu }) => {
       }
       
       // Render particles - FIXED SYSTEM WITH PROPER ERROR HANDLING
-      if (particles.length > 0) {
+      if (particlesRef.current.length > 0) {
         // Reduced logging frequency - only log every 60 frames (1 second)
         if (gameStateRef.current.frameCount % 60 === 0) {
-          console.log(`🎨 RENDERING ${particles.length} PARTICLES (Frame: ${gameStateRef.current.frameCount})`);
+          console.log(`🎨 RENDERING ${particlesRef.current.length} PARTICLES (Frame: ${gameStateRef.current.frameCount})`);
         }
         
         try {
           ctx.save(); // Save context state
           
-          particles.forEach((particle, index) => {
+          particlesRef.current.forEach((particle, index) => {
             try {
               const alpha = Math.max(0.8, particle.life / particle.maxLife);
               
@@ -1402,18 +2156,21 @@ const SideScroller = ({ character, onBackToMenu }) => {
         }
         
         // Debug info with reduced frequency
-        if (particles.length > 0 && gameStateRef.current.frameCount % 120 === 0) {
-          const explosionCount = particles.filter(p => p.type === 'explosion').length;
-          const sparkCount = particles.filter(p => p.type === 'spark').length;
-          const shockwaveCount = particles.filter(p => p.type === 'shockwave').length;
-          const debrisCount = particles.filter(p => p.type === 'debris').length;
-          const normalCount = particles.filter(p => p.type === 'normal').length;
+        if (particlesRef.current.length > 0 && gameStateRef.current.frameCount % 120 === 0) {
+          const explosionCount = particlesRef.current.filter(p => p.type === 'explosion').length;
+          const sparkCount = particlesRef.current.filter(p => p.type === 'spark').length;
+          const shockwaveCount = particlesRef.current.filter(p => p.type === 'shockwave').length;
+          const debrisCount = particlesRef.current.filter(p => p.type === 'debris').length;
+          const normalCount = particlesRef.current.filter(p => p.type === 'normal').length;
           
           console.log(`Particle breakdown: ${explosionCount} explosion, ${sparkCount} spark, ${shockwaveCount} shockwave, ${debrisCount} debris, ${normalCount} normal`);
         }
       }
       
       // Draw enhanced projectiles with type-specific effects
+      if (projectiles.length > 0) {
+        console.log(`🎯 RENDERING ${projectiles.length} PROJECTILES`, projectiles.map(p => `${p.type} at (${Math.round(p.x)}, ${Math.round(p.y)})`));
+      }
       projectiles.forEach((projectile, index) => {
         ctx.save();
         
@@ -1536,7 +2293,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
       
       ctx.fillStyle = '#ffff00';
       ctx.font = '14px Arial';
-      ctx.fillText(`Active Particles: ${particles.length}`, canvas.width - 290, 50);
+      ctx.fillText(`Active Particles: ${particlesRef.current.length}`, canvas.width - 290, 50);
       ctx.fillText(`Active Projectiles: ${projectiles.length}`, canvas.width - 290, 70);
       ctx.fillText(`Frame: ${gameStateRef.current.frameCount || 0}`, canvas.width - 290, 90);
       
@@ -1557,8 +2314,8 @@ const SideScroller = ({ character, onBackToMenu }) => {
       ctx.fillText(`2 - Plasma (KB: 5)`, canvas.width - 290, 220);
       ctx.fillText(`3 - Homing (KB: 6)`, canvas.width - 290, 235);
       
-      if (particles.length > 0) {
-        const types = particles.reduce((acc, p) => {
+      if (particlesRef.current.length > 0) {
+        const types = particlesRef.current.reduce((acc, p) => {
           acc[p.type] = (acc[p.type] || 0) + 1;
           return acc;
         }, {});
@@ -1586,102 +2343,111 @@ const SideScroller = ({ character, onBackToMenu }) => {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Enhanced atmospheric background drawing
+    // Enhanced realistic atmospheric background drawing
     function drawAtmosphericBackground(ctx, canvas) {
       const time = Date.now() * 0.001;
       
-      // 1. Animated sky gradient with atmospheric perspective
-      const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.7);
-      skyGradient.addColorStop(0, `hsl(${220 + Math.sin(time * 0.3) * 15}, 45%, ${8 + Math.sin(time * 0.2) * 2}%)`);
-      skyGradient.addColorStop(0.3, `hsl(${210 + Math.sin(time * 0.4) * 12}, 40%, ${12 + Math.sin(time * 0.3) * 3}%)`);
-      skyGradient.addColorStop(0.7, `hsl(${200 + Math.sin(time * 0.5) * 10}, 35%, ${15 + Math.sin(time * 0.1) * 2}%)`);
-      skyGradient.addColorStop(1, `hsl(${190 + Math.sin(time * 0.6) * 8}, 30%, ${18 + Math.sin(time * 0.4) * 3}%)`);
+      // 1. Dynamic sky with realistic color transitions
+      const timeOfDay = (Math.sin(time * 0.1) + 1) * 0.5; // 0-1 cycle
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.8);
+      
+      if (timeOfDay < 0.3) { // Night
+        skyGradient.addColorStop(0, `hsl(220, 50%, ${4 + timeOfDay * 8}%)`);
+        skyGradient.addColorStop(0.3, `hsl(210, 45%, ${6 + timeOfDay * 10}%)`);
+        skyGradient.addColorStop(0.7, `hsl(200, 40%, ${8 + timeOfDay * 12}%)`);
+        skyGradient.addColorStop(1, `hsl(190, 35%, ${10 + timeOfDay * 15}%)`);
+      } else if (timeOfDay < 0.7) { // Twilight/Dawn
+        skyGradient.addColorStop(0, `hsl(${30 + timeOfDay * 20}, 60%, ${15 + timeOfDay * 10}%)`);
+        skyGradient.addColorStop(0.4, `hsl(${20 + timeOfDay * 30}, 55%, ${20 + timeOfDay * 15}%)`);
+        skyGradient.addColorStop(0.8, `hsl(${210 + timeOfDay * 20}, 40%, ${25 + timeOfDay * 20}%)`);
+        skyGradient.addColorStop(1, `hsl(${200 + timeOfDay * 15}, 35%, ${30 + timeOfDay * 25}%)`);
+      } else { // Day
+        skyGradient.addColorStop(0, `hsl(210, 70%, ${40 + timeOfDay * 20}%)`);
+        skyGradient.addColorStop(0.5, `hsl(200, 65%, ${50 + timeOfDay * 25}%)`);
+        skyGradient.addColorStop(1, `hsl(190, 60%, ${60 + timeOfDay * 30}%)`);
+      }
+      
       ctx.fillStyle = skyGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height * 0.8);
       
-      // 2. Distant mountain silhouettes
-      ctx.save();
-      ctx.globalAlpha = 0.4;
-      ctx.fillStyle = '#1a1a2e';
+      // 2. Realistic city skyline with multiple layers
+      drawCityscape(ctx, canvas, time, timeOfDay);
       
-      // Mountain layer 1 (furthest)
-      ctx.beginPath();
-      ctx.moveTo(0, canvas.height * 0.6);
-      for (let x = 0; x <= canvas.width; x += 50) {
-        const y = canvas.height * 0.6 + Math.sin((x + time * 20) * 0.01) * 30 + Math.sin(x * 0.005) * 50;
-        ctx.lineTo(x, y);
-      }
-      ctx.lineTo(canvas.width, canvas.height);
-      ctx.lineTo(0, canvas.height);
-      ctx.fill();
-      
-      // Mountain layer 2 (closer)
-      ctx.globalAlpha = 0.6;
-      ctx.fillStyle = '#16213e';
-      ctx.beginPath();
-      ctx.moveTo(0, canvas.height * 0.7);
-      for (let x = 0; x <= canvas.width; x += 40) {
-        const y = canvas.height * 0.7 + Math.sin((x - time * 15) * 0.008) * 40 + Math.sin(x * 0.003) * 60;
-        ctx.lineTo(x, y);
-      }
-      ctx.lineTo(canvas.width, canvas.height);
-      ctx.lineTo(0, canvas.height);
-      ctx.fill();
-      ctx.restore();
-      
-      // 3. Twinkling stars
-      backgroundStars.current.forEach(star => {
-        const twinkle = Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.3 + 0.7;
-        ctx.save();
-        ctx.globalAlpha = star.brightness * twinkle * 0.8;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = star.size * 2;
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        
-        // Add larger stars with cross pattern
-        if (star.size > 1.5) {
+      // 3. Enhanced starfield with realistic twinkle
+      if (timeOfDay < 0.5) { // Only show stars at night/twilight
+        backgroundStars.current.forEach(star => {
+          const depth = star.layer;
+          const parallax = depth * 0.1;
+          const adjustedX = star.x + Math.sin(time * 0.1) * parallax;
+          
+          const twinkle = Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.4 + 0.6;
+          const atmosphericDimming = Math.max(0, 1 - timeOfDay * 2);
+          
           ctx.save();
-          ctx.globalAlpha = star.brightness * twinkle * 0.4;
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 1;
-          ctx.shadowColor = '#ffffff';
-          ctx.shadowBlur = 3;
-          const crossSize = star.size * 3;
+          ctx.globalAlpha = star.brightness * twinkle * atmosphericDimming * (1 - depth * 0.3);
+          ctx.fillStyle = star.color;
+          ctx.shadowColor = star.color;
+          ctx.shadowBlur = star.size * (2 + depth);
+          
+          // Different star rendering based on size
+          if (star.size > 2) {
+            // Large stars with cross pattern
+            const crossSize = star.size * 4;
+            ctx.lineWidth = 1 + depth * 0.5;
+            ctx.strokeStyle = star.color;
+            ctx.beginPath();
+            ctx.moveTo(adjustedX - crossSize, star.y);
+            ctx.lineTo(adjustedX + crossSize, star.y);
+            ctx.moveTo(adjustedX, star.y - crossSize);
+            ctx.lineTo(adjustedX, star.y + crossSize);
+            ctx.stroke();
+          }
+          
+          // Core star
           ctx.beginPath();
-          ctx.moveTo(star.x - crossSize, star.y);
-          ctx.lineTo(star.x + crossSize, star.y);
-          ctx.moveTo(star.x, star.y - crossSize);
-          ctx.lineTo(star.x, star.y + crossSize);
-          ctx.stroke();
+          ctx.arc(adjustedX, star.y, star.size, 0, Math.PI * 2);
+          ctx.fill();
           ctx.restore();
-        }
-      });
+        });
+      }
       
-      // 4. Slow-moving distant clouds
+      // 4. Dynamic weather effects
+      drawWeatherEffects(ctx, canvas, time);
+      
+      // 5. Atmospheric clouds with realistic movement
       backgroundClouds.current.forEach(cloud => {
-        cloud.x += cloud.speed;
+        cloud.x += cloud.speed + weatherEffects.current.wind * 0.1;
         if (cloud.x > canvas.width + cloud.width) {
           cloud.x = -cloud.width;
-          cloud.y = Math.random() * 200 + 50;
+          cloud.y = Math.random() * 150 + 30;
         }
         
+        const layerAlpha = (3 - cloud.layer) / 3; // Further clouds are more transparent
         ctx.save();
-        ctx.globalAlpha = cloud.opacity;
-        ctx.fillStyle = '#2a2a4a';
+        ctx.globalAlpha = cloud.opacity * layerAlpha;
         
-        // Draw cloud with multiple overlapping circles
-        for (let i = 0; i < 5; i++) {
-          const offsetX = (i - 2) * cloud.width * 0.15;
-          const offsetY = Math.sin(i + time * 0.5) * 5;
+        // Different cloud rendering based on type
+        if (cloud.type === 'storm') {
+          ctx.fillStyle = '#2c2c54';
+          ctx.shadowColor = '#2c2c54';
+          ctx.shadowBlur = 10;
+        } else if (cloud.type === 'stratus') {
+          ctx.fillStyle = '#404066';
+        } else {
+          ctx.fillStyle = '#505080';
+        }
+        
+        // Realistic cloud shape with multiple layers
+        for (let i = 0; i < 7; i++) {
+          const offsetX = (i - 3) * cloud.width * 0.12;
+          const offsetY = Math.sin(i + time * 0.3) * 8;
+          const radius = cloud.height * (0.3 + i * 0.05);
+          
           ctx.beginPath();
           ctx.arc(
             cloud.x + offsetX + cloud.width * 0.5, 
             cloud.y + offsetY + cloud.height * 0.5, 
-            cloud.height * 0.4, 
+            radius, 
             0, Math.PI * 2
           );
           ctx.fill();
@@ -1689,32 +2455,78 @@ const SideScroller = ({ character, onBackToMenu }) => {
         ctx.restore();
       });
       
-      // 5. Floating space debris
+      // 6. Enhanced floating debris with realistic physics
       backgroundDebris.current.forEach(debris => {
+        // Wind effect
+        debris.speedX += weatherEffects.current.wind * 0.02;
         debris.x += debris.speedX;
         debris.y += debris.speedY;
         debris.rotation += debris.rotationSpeed;
         
-        // Wrap around screen
-        if (debris.x > canvas.width + 10) debris.x = -10;
-        if (debris.x < -10) debris.x = canvas.width + 10;
-        if (debris.y > canvas.height + 10) debris.y = -10;
-        if (debris.y < -10) debris.y = canvas.height + 10;
+        // Add gravity and air resistance
+        if (debris.type === 'dust' || debris.type === 'paper') {
+          debris.speedY += 0.02; // Light gravity
+          debris.speedX *= 0.995; // Air resistance
+        } else {
+          debris.speedY += 0.05; // Heavier objects
+          debris.speedX *= 0.98;
+        }
         
+        // Wrap around screen with some randomization
+        if (debris.x > canvas.width + 20) {
+          debris.x = -20;
+          debris.speedX = (Math.random() - 0.5) * 0.8;
+        }
+        if (debris.x < -20) debris.x = canvas.width + 20;
+        if (debris.y > canvas.height + 20) {
+          debris.y = -20;
+          debris.speedY = Math.random() * 0.5;
+        }
+        if (debris.y < -20) debris.y = canvas.height + 20;
+        
+        const layerAlpha = (3 - debris.layer) / 3;
         ctx.save();
         ctx.translate(debris.x, debris.y);
         ctx.rotate(debris.rotation);
-        ctx.globalAlpha = debris.opacity;
+        ctx.globalAlpha = debris.opacity * layerAlpha;
+        
+        // Different debris rendering based on type
         ctx.fillStyle = debris.color;
         
-        // Draw small geometric debris
-        if (Math.random() > 0.5) {
-          // Rectangle debris
-          ctx.fillRect(-debris.size, -debris.size, debris.size * 2, debris.size * 2);
-        } else {
-          // Triangle debris
-          ctx.beginPath();
-          ctx.moveTo(0, -debris.size);
+        switch (debris.type) {
+          case 'metal':
+            ctx.shadowColor = debris.color;
+            ctx.shadowBlur = 2;
+            ctx.fillRect(-debris.size, -debris.size, debris.size * 2, debris.size * 2);
+            break;
+          case 'paper':
+            ctx.beginPath();
+            ctx.moveTo(-debris.size, -debris.size);
+            ctx.lineTo(debris.size, -debris.size * 0.7);
+            ctx.lineTo(debris.size * 0.8, debris.size);
+            ctx.lineTo(-debris.size * 0.9, debris.size * 0.8);
+            ctx.fill();
+            break;
+          case 'spark':
+            ctx.shadowColor = debris.color;
+            ctx.shadowBlur = debris.size * 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, debris.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+          default:
+            ctx.beginPath();
+            ctx.arc(0, 0, debris.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+      });
+      
+      // 7. Dynamic lighting system
+      drawAtmosphericLighting(ctx, canvas, time, timeOfDay);
+    }
+
+    // Now add the missing functions for realistic background
           ctx.lineTo(-debris.size, debris.size);
           ctx.lineTo(debris.size, debris.size);
           ctx.fill();
@@ -1996,12 +2808,12 @@ const SideScroller = ({ character, onBackToMenu }) => {
 
     function createParticles(x, y, color, count = 4, type = 'normal') {
       // Only log if particles exceed reasonable limit
-      if (particles.length > 100) {
-        console.warn(`⚠️ High particle count: ${particles.length} - Creating ${count} more ${type} particles`);
+      if (particlesRef.current.length > 100) {
+        console.warn(`⚠️ High particle count: ${particlesRef.current.length} - Creating ${count} more ${type} particles`);
       }
       
       // Limit total particle count to prevent performance issues
-      if (particles.length > 200) {
+      if (particlesRef.current.length > 200) {
         console.warn('🚫 Particle limit reached - skipping creation');
         return;
       }
@@ -2081,6 +2893,148 @@ const SideScroller = ({ character, onBackToMenu }) => {
             type: 'debris',
             bounce: 0.3 + Math.random() * 0.4
           };
+        } else if (type === 'impact') {
+          // Impact particles for combat hits
+          const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+          const speed = 1 + Math.random() * 3;
+          const life = 20 + Math.random() * 10;
+          
+          particle = {
+            x: x + (Math.random() - 0.5) * 10,
+            y: y + (Math.random() - 0.5) * 10,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: life,
+            maxLife: life,
+            color: color,
+            size: 2 + Math.random() * 4,
+            type: 'impact'
+          };
+        } else if (type === 'energy') {
+          // Energy particles for special moves
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 2 + Math.random() * 4;
+          const life = 30 + Math.random() * 20;
+          
+          particle = {
+            x: x + (Math.random() - 0.5) * 15,
+            y: y + (Math.random() - 0.5) * 15,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: life,
+            maxLife: life,
+            color: color,
+            size: 3 + Math.random() * 4,
+            type: 'energy',
+            glow: true,
+            pulseRate: 0.1 + Math.random() * 0.1
+          };
+        } else if (type === 'dust') {
+          // Dust particles for movement
+          const life = 15 + Math.random() * 10;
+          
+          particle = {
+            x: x + (Math.random() - 0.5) * 25,
+            y: y + (Math.random() - 0.5) * 8,
+            vx: (Math.random() - 0.5) * 2,
+            vy: -(Math.random() * 1.5),
+            life: life,
+            maxLife: life,
+            color: color,
+            size: 1 + Math.random() * 3,
+            type: 'dust',
+            drift: true
+          };
+        } else if (type === 'trail') {
+          // Trail particles for fast movement
+          const life = 12 + Math.random() * 8;
+          
+          particle = {
+            x: x + (Math.random() - 0.5) * 8,
+            y: y + (Math.random() - 0.5) * 8,
+            vx: (Math.random() - 0.5) * 1,
+            vy: (Math.random() - 0.5) * 1,
+            life: life,
+            maxLife: life,
+            color: color,
+            size: 1 + Math.random() * 2,
+            type: 'trail',
+            fadeRate: 0.15
+          };
+        } else if (type === 'sparkle') {
+          // Sparkle particles for special items/effects
+          const life = 40 + Math.random() * 20;
+          
+          particle = {
+            x: x + (Math.random() - 0.5) * 20,
+            y: y + (Math.random() - 0.5) * 20,
+            vx: (Math.random() - 0.5) * 1,
+            vy: -(Math.random() * 2),
+            life: life,
+            maxLife: life,
+            color: color,
+            size: 2 + Math.random() * 3,
+            type: 'sparkle',
+            twinkle: true,
+            twinkleRate: 0.2
+          };
+        } else if (type === 'spiral') {
+          // Spiral particles for spinning attacks
+          const angle = (i / count) * Math.PI * 2;
+          const radius = 10 + Math.random() * 15;
+          const life = 25 + Math.random() * 15;
+          
+          particle = {
+            x: x + Math.cos(angle) * radius,
+            y: y + Math.sin(angle) * radius,
+            vx: Math.cos(angle + Math.PI/2) * 2,
+            vy: Math.sin(angle + Math.PI/2) * 2,
+            life: life,
+            maxLife: life,
+            color: color,
+            size: 2 + Math.random() * 3,
+            type: 'spiral',
+            spiralSpeed: 0.1 + Math.random() * 0.1
+          };
+        } else if (type === 'glow') {
+          // Glowing particles for aura effects
+          const life = 20 + Math.random() * 15;
+          
+          particle = {
+            x: x + (Math.random() - 0.5) * 30,
+            y: y + (Math.random() - 0.5) * 30,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+            life: life,
+            maxLife: life,
+            color: color,
+            size: 3 + Math.random() * 4,
+            type: 'glow',
+            glow: true,
+            alpha: 0.4 + Math.random() * 0.4
+          };
+        } else if (type === 'aura') {
+          // Aura particles that orbit around a point
+          const angle = (i / count) * Math.PI * 2;
+          const radius = 20 + Math.random() * 20;
+          const life = 60 + Math.random() * 30;
+          
+          particle = {
+            x: x + Math.cos(angle) * radius,
+            y: y + Math.sin(angle) * radius,
+            vx: 0,
+            vy: 0,
+            life: life,
+            maxLife: life,
+            color: color,
+            size: 2 + Math.random() * 2,
+            type: 'aura',
+            centerX: x,
+            centerY: y,
+            angle: angle,
+            radius: radius,
+            orbitSpeed: 0.02 + Math.random() * 0.03
+          };
         } else {
           // Normal particles - improved default
           const life = 20 + Math.random() * 15; // Shorter life
@@ -2101,14 +3055,13 @@ const SideScroller = ({ character, onBackToMenu }) => {
         newParticles.push(particle);
       }
       
-      setParticles(prev => {
-        const updated = [...prev, ...newParticles];
-        // Only log significant particle additions
-        if (updated.length > prev.length + 5) {
-          console.log(`✅ PARTICLES ADDED: ${prev.length} -> ${updated.length}`);
-        }
-        return updated;
-      });
+      const previousCount = particlesRef.current.length;
+      particlesRef.current.push(...newParticles);
+      
+      // Only log significant particle additions
+      if (particlesRef.current.length > previousCount + 5) {
+        console.log(`✅ PARTICLES ADDED: ${previousCount} -> ${particlesRef.current.length}`);
+      }
     }
 
     // Enhanced projectile system with multiple types
@@ -2200,15 +3153,18 @@ const SideScroller = ({ character, onBackToMenu }) => {
       };
       
       setProjectiles(prev => [...prev, newProjectile]);
+      console.log(`🚀 PROJECTILE CREATED: ${type} at (${newProjectile.x}, ${newProjectile.y}) - Total: ${projectiles.length + 1}`);
+      console.log(`📊 Projectile details:`, { 
+        x: newProjectile.x, 
+        y: newProjectile.y, 
+        vx: newProjectile.vx, 
+        vy: newProjectile.vy, 
+        size: newProjectile.size, 
+        color: newProjectile.color,
+        direction: direction 
+      });
       
-      // Enhanced muzzle flash based on projectile type
-      const muzzleColor = config.color;
-      const muzzleCount = type === 'power' ? 5 : type === 'rapid' ? 2 : 3;
-      createParticles(newProjectile.x, newProjectile.y, muzzleColor, muzzleCount, 'spark');
-      
-      if (type === 'power') {
-        createParticles(newProjectile.x, newProjectile.y, '#ffffff', 2, 'explosion');
-      }
+      // Muzzle flash particles removed - now only show on character hits
     }
 
     function triggerCollisionAnimation(x, y) {
@@ -2417,65 +3373,79 @@ const SideScroller = ({ character, onBackToMenu }) => {
     }
 
     function updateParticles() {
-      setParticles(prevParticles => {
-        const updatedParticles = prevParticles.map(particle => {
-          let newParticle = { ...particle };
-          
-          // Update based on particle type
-          if (particle.type === 'explosion') {
-            newParticle.x += particle.vx;
-            newParticle.y += particle.vy;
-            newParticle.vx *= 0.96; // Slow down over time
-            newParticle.vy *= 0.96;
-            newParticle.vy += 0.05; // Light gravity
+      if (particlesRef.current.length > 0) {
+        console.log(`⚡ UPDATING ${particlesRef.current.length} PARTICLES`);
+      }
+      
+      const updatedParticles = [];
+      
+      for (let i = 0; i < particlesRef.current.length; i++) {
+        const particle = particlesRef.current[i];
+        let newParticle = { ...particle };
+        
+        // Update based on particle type
+        if (particle.type === 'explosion') {
+          newParticle.x += particle.vx;
+          newParticle.y += particle.vy;
+          newParticle.vx *= 0.96; // Slow down over time
+          newParticle.vy *= 0.96;
+          newParticle.vy += 0.05; // Light gravity
+          if (particle.rotationSpeed !== undefined) {
             newParticle.rotation += particle.rotationSpeed;
-            newParticle.life -= 1;
-          } else if (particle.type === 'spark') {
-            // Update trail with size limit
-            if (particle.trail) {
-              newParticle.trail = [...particle.trail, { x: particle.x, y: particle.y }];
-              // Limit trail length to prevent memory issues
-              if (newParticle.trail.length > particle.trailLength) {
-                newParticle.trail.shift();
-              }
+          }
+          newParticle.life -= 1;
+        } else if (particle.type === 'spark') {
+          // Update trail with size limit
+          if (particle.trail) {
+            newParticle.trail = [...particle.trail, { x: particle.x, y: particle.y }];
+            // Limit trail length to prevent memory issues
+            if (newParticle.trail.length > particle.trailLength) {
+              newParticle.trail.shift();
             }
-            
-            newParticle.x += particle.vx;
-            newParticle.y += particle.vy;
-            newParticle.vx *= 0.92; // Fast deceleration
-            newParticle.vy *= 0.92;
-            newParticle.life -= 1;
-          } else if (particle.type === 'shockwave') {
-            newParticle.size += particle.expansion;
-            newParticle.life -= 1;
-          } else if (particle.type === 'debris') {
-            newParticle.x += particle.vx;
-            newParticle.y += particle.vy;
-            newParticle.vx *= 0.98; // Air resistance
-            newParticle.vy += 0.15; // Stronger gravity for debris
-            
-            // Bounce off ground
-            if (newParticle.y > GROUND_Y - 10) {
-              newParticle.y = GROUND_Y - 10;
-              newParticle.vy *= -particle.bounce;
-              newParticle.vx *= 0.8; // Friction on bounce
-            }
-            
-            newParticle.life -= 1;
-          } else {
-            // Normal particle physics
-            newParticle.x += particle.vx;
-            newParticle.y += particle.vy;
-            newParticle.vy += 0.08; // Light gravity
-            newParticle.vx *= 0.99; // Air resistance
-            newParticle.life -= 1;
           }
           
-          return newParticle;
-        }).filter(particle => particle.life > 0);
+          newParticle.x += particle.vx;
+          newParticle.y += particle.vy;
+          newParticle.vx *= 0.92; // Fast deceleration
+          newParticle.vy *= 0.92;
+          newParticle.life -= 1;
+        } else if (particle.type === 'shockwave') {
+          newParticle.size += particle.expansion;
+          newParticle.life -= 1;
+        } else if (particle.type === 'debris') {
+          newParticle.x += particle.vx;
+          newParticle.y += particle.vy;
+          newParticle.vx *= 0.98; // Air resistance
+          newParticle.vy += 0.15; // Stronger gravity for debris
+          
+          // Bounce off ground
+          if (newParticle.y > GROUND_Y - 10) {
+            newParticle.y = GROUND_Y - 10;
+            newParticle.vy *= -particle.bounce;
+            newParticle.vx *= 0.8; // Friction on bounce
+          }
+          
+          newParticle.life -= 1;
+        } else {
+          // Normal particle physics
+          newParticle.x += particle.vx;
+          newParticle.y += particle.vy;
+          newParticle.vy += 0.08; // Light gravity
+          newParticle.vx *= 0.99; // Air resistance
+          newParticle.life -= 1;
+        }
         
-        return updatedParticles;
-      });
+        // Only keep particles that are still alive
+        if (newParticle.life > 0) {
+          updatedParticles.push(newParticle);
+        }
+      }
+      
+      if (particlesRef.current.length !== updatedParticles.length) {
+        console.log(`💀 PARTICLES EXPIRED: ${particlesRef.current.length} -> ${updatedParticles.length}`);
+      }
+      
+      particlesRef.current = updatedParticles;
     }
 
     function updateCombatSystem() {
@@ -2545,20 +3515,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
       // Update particles
       updateParticles();
       
-      // Optimized test particles - reduced frequency and count
-      if (gameTime % 300 === 0) { // Every 5 seconds instead of 2
-        createParticles(600, 300, '#ff0000', 2, 'explosion'); // Reduced from 4 to 2
-        createParticles(700, 250, '#00ff00', 2, 'spark'); // Reduced from 3 to 2
-        createParticles(500, 350, '#0000ff', 1, 'shockwave'); // Reduced from 2 to 1
-        createParticles(650, 200, '#ffff00', 1, 'debris'); // Reduced from 2 to 1
-        createParticles(550, 400, '#ffffff', 3, 'normal'); // Reduced from 5 to 3
-      }
+      // Test particles removed - now only show on character hits
       
-      // Reduced frequency attack particles
-      if (playerRef.current.isAttacking && gameTime % 10 === 0) { // Only every 10 frames
-        createParticles(playerRef.current.x + 50, playerRef.current.y - 50, '#ff0000', 1, 'explosion');
-        createParticles(playerRef.current.x + 50, playerRef.current.y - 30, '#ffffff', 1, 'spark');
-      }
+      // Attack particles removed - now only show on character hits
       
       // Update sprite animations with enhanced effects
       if (playerSpriteRef.current) {
@@ -2874,6 +3833,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
       
       // Enhanced projectile update system with physics and homing
       setProjectiles(prev => {
+        if (prev.length > 0) {
+          console.log(`⚡ UPDATING ${prev.length} PROJECTILES`);
+        }
         const updatedProjectiles = [];
         
         for (let i = 0; i < prev.length; i++) {
@@ -3130,6 +4092,19 @@ const SideScroller = ({ character, onBackToMenu }) => {
       }
     }
 
+    // Update only sprite animations when game is paused
+    function updateSpritesOnly() {
+      // Update sprite animations to maintain visual continuity during pause
+      // This keeps sprites visible and their effects running smoothly
+      if (playerSpriteRef.current) {
+        playerSpriteRef.current.update();
+      }
+      
+      if (enemySpriteRef.current) {
+        enemySpriteRef.current.update();
+      }
+    }
+
     function loop() {
       try {
         console.log('🔄 Game loop tick - isPaused:', isPaused, 'gameOver:', gameOver.active, 'spritesLoaded:', spritesLoaded);
@@ -3139,7 +4114,8 @@ const SideScroller = ({ character, onBackToMenu }) => {
           update();
           draw();
         } else {
-          // Game is paused or over, still draw current state
+          // Game is paused or over, still update sprite animations and draw current state
+          updateSpritesOnly();
           draw();
         }
       } catch (error) {
@@ -3330,6 +4306,8 @@ const SideScroller = ({ character, onBackToMenu }) => {
         console.log('Keyboard: Normal projectile fired');
         fireProjectile(playerRef.current, playerRef.current.facing, 'normal');
         playerRef.current.attackCooldown = 20;
+      } else if ((e.key === 'q' || e.key === 'Q') && playerRef.current.attackCooldown > 0) {
+        console.log(`❌ Projectile blocked - Attack cooldown: ${playerRef.current.attackCooldown}`);
         
       } else if ((e.key === 'r' || e.key === 'R') && playerRef.current.attackCooldown === 0) {
         // Rapid projectile (R key)
@@ -3354,6 +4332,29 @@ const SideScroller = ({ character, onBackToMenu }) => {
         console.log('Keyboard: Homing projectile fired');
         fireProjectile(playerRef.current, playerRef.current.facing, 'homing');
         playerRef.current.attackCooldown = 60;
+      
+      } else if (e.key === 't' || e.key === 'T') {
+        // Manual particle test (T key) - simulates character hit effects
+        console.log('🎆 MANUAL PARTICLE TEST - Simulating character hit effects');
+        const x = playerRef.current.x;
+        const y = playerRef.current.y - 50;
+        createParticles(x, y, '#ff0000', 5, 'explosion');
+        createParticles(x + 30, y, '#00ff00', 3, 'spark');
+        createParticles(x - 30, y, '#0000ff', 2, 'shockwave');
+        createParticles(x, y + 20, '#ffff00', 4, 'debris');
+        createParticles(x, y - 20, '#ffffff', 6, 'normal');
+      
+      } else if (e.key === 'y' || e.key === 'Y') {
+        // Manual projectile test (Y key)
+        console.log('🚀 MANUAL PROJECTILE TEST - Firing all projectile types');
+        console.log('📍 Player position:', playerRef.current.x, playerRef.current.y);
+        console.log('📍 Player facing:', playerRef.current.facing);
+        console.log('🎯 Canvas dimensions:', canvasRef.current?.width, canvasRef.current?.height);
+        fireProjectile(playerRef.current, playerRef.current.facing, 'normal');
+        setTimeout(() => fireProjectile(playerRef.current, playerRef.current.facing, 'rapid'), 200);
+        setTimeout(() => fireProjectile(playerRef.current, playerRef.current.facing, 'power'), 400);
+        setTimeout(() => fireProjectile(playerRef.current, playerRef.current.facing, 'plasma'), 600);
+        setTimeout(() => fireProjectile(playerRef.current, playerRef.current.facing, 'homing'), 800);
       }
     }
     
@@ -4040,7 +5041,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
         }}>
           <span>Player: {player.name} vs Enemy: {enemy.name}</span>
           <span>Sprites: {spritesLoaded.player ? '✅' : '⏳'} / {spritesLoaded.enemy ? '✅' : '⏳'}</span>
-          <span>Particles: {particles.length}</span>
+          <span>Particles: {particlesRef.current.length}</span>
           {connectedGamepad.type && (
             <span style={{ color: '#4facfe' }}>
               🎮 {connectedGamepad.type} Controller

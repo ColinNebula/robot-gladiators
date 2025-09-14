@@ -17,7 +17,7 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
 
   // Pages where navigation should be hidden
-  const hideNavOnPages = ['/battle', '/versus', '/character-select'];
+  const hideNavOnPages = ['/battle', '/versus', '/character-select', '/game', '/test-game'];
   const showNavigation = !hideNavOnPages.includes(location.pathname);
 
   const handleSplashContinue = () => {
