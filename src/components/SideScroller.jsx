@@ -1186,7 +1186,6 @@ const SideScroller = ({ character, onBackToMenu }) => {
   // Initialize realistic atmospheric background elements
   function initializeBackgroundElements() {
     // Initialize realistic background systems
-    initializeRealisticBackground();
     initializeWeatherEffects();
     initializeLightingSystem();
     
