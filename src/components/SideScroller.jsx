@@ -1185,6 +1185,11 @@ const SideScroller = ({ character, onBackToMenu }) => {
   
   // Initialize realistic atmospheric background elements
   function initializeBackgroundElements() {
+    // Initialize realistic background systems
+    initializeRealisticBackground();
+    initializeWeatherEffects();
+    initializeLightingSystem();
+    
     // Create enhanced starfield
     backgroundStars.current = [];
     for (let i = 0; i < 200; i++) {
@@ -1502,16 +1507,15 @@ const SideScroller = ({ character, onBackToMenu }) => {
     console.log('Enhanced sprite animations initialized');
   }, []);
 
+  // Main game loop useEffect
   useEffect(() => {
+    console.log('🔄 Starting main game loop useEffect...');
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.error('❌ Canvas not found! Game cannot start.');
-      return;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.error('❌ Canvas context not available! Game cannot start.');
+    const ctx = canvas?.getContext('2d');
+
+    // Ensure canvas and context are available
+    if (!canvas || !ctx) {
+      console.warn('⚠️ Canvas or context not available, skipping frame');
       return;
     }
     
@@ -1520,7 +1524,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
 
     function draw() {
       try {
-        console.log('🎨 Drawing frame...');
+        // Drawing frame silently for performance
         
         // Clear canvas first
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2168,9 +2172,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
       }
       
       // Draw enhanced projectiles with type-specific effects
-      if (projectiles.length > 0) {
-        console.log(`🎯 RENDERING ${projectiles.length} PROJECTILES`, projectiles.map(p => `${p.type} at (${Math.round(p.x)}, ${Math.round(p.y)})`));
-      }
+      // Projectiles rendered silently for performance
       projectiles.forEach((projectile, index) => {
         ctx.save();
         
@@ -2526,52 +2528,149 @@ const SideScroller = ({ character, onBackToMenu }) => {
       drawAtmosphericLighting(ctx, canvas, time, timeOfDay);
     }
 
-    // Now add the missing functions for realistic background
-          ctx.lineTo(-debris.size, debris.size);
-          ctx.lineTo(debris.size, debris.size);
-          ctx.fill();
-        }
-        ctx.restore();
-      });
+    // Realistic cityscape drawing function
+    function drawCityscape(ctx, canvas, time, timeOfDay) {
+      const buildings = realisticBackground.current.buildings;
       
-      // 6. Atmospheric lighting effects
-      const lightingGradient = ctx.createRadialGradient(
-        canvas.width * 0.3, canvas.height * 0.2, 0,
-        canvas.width * 0.3, canvas.height * 0.2, canvas.width * 0.8
-      );
-      lightingGradient.addColorStop(0, 'rgba(79, 172, 254, 0.1)');
-      lightingGradient.addColorStop(0.5, 'rgba(79, 172, 254, 0.05)');
-      lightingGradient.addColorStop(1, 'rgba(79, 172, 254, 0)');
-      ctx.fillStyle = lightingGradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height * 0.8);
-      
-      // 7. Dynamic energy fields
-      for (let i = 0; i < 3; i++) {
-        const fieldX = (canvas.width * 0.2) + (i * canvas.width * 0.3);
-        const fieldY = canvas.height * 0.4 + Math.sin(time * 0.8 + i * 2) * 20;
+      ctx.save();
+      buildings.forEach(building => {
+        // Building base color changes with time of day
+        const baseColor = timeOfDay < 0.3 ? building.color : 
+                         timeOfDay < 0.7 ? '#2a3550' : '#3a4560';
         
+        ctx.fillStyle = baseColor;
+        ctx.fillRect(building.x, building.y, building.width, building.height);
+        
+        // Building windows
+        building.windows.forEach(window => {
+          if (window.lit) {
+            const flicker = Math.sin(time * 2 + window.id) * 0.1 + 0.9;
+            ctx.globalAlpha = flicker * 0.8;
+            ctx.fillStyle = window.color;
+            ctx.fillRect(
+              building.x + window.x, 
+              building.y + window.y, 
+              window.width, 
+              window.height
+            );
+            
+            // Window glow effect
+            if (timeOfDay < 0.5) {
+              ctx.shadowColor = window.color;
+              ctx.shadowBlur = 3;
+              ctx.fillRect(
+                building.x + window.x, 
+                building.y + window.y, 
+                window.width, 
+                window.height
+              );
+              ctx.shadowBlur = 0;
+            }
+          }
+        });
+        
+        // Building details (antennas, spires)
+        if (building.hasAntenna) {
+          ctx.strokeStyle = '#4a90e2';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(building.x + building.width * 0.5, building.y);
+          ctx.lineTo(building.x + building.width * 0.5, building.y - 20);
+          ctx.stroke();
+          
+          // Blinking antenna light
+          if (Math.sin(time * 3) > 0.5) {
+            ctx.fillStyle = '#ff4444';
+            ctx.beginPath();
+            ctx.arc(building.x + building.width * 0.5, building.y - 20, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      });
+      ctx.restore();
+    }
+    
+    // Weather effects drawing function
+    function drawWeatherEffects(ctx, canvas, time) {
+      const weather = weatherEffects.current;
+      
+      // Rain effect
+      if (weather.rainIntensity > 0) {
         ctx.save();
-        ctx.globalAlpha = 0.05 + Math.sin(time * 1.2 + i) * 0.03;
-        const energyGradient = ctx.createRadialGradient(
-          fieldX, fieldY, 0,
-          fieldX, fieldY, 100
-        );
-        energyGradient.addColorStop(0, '#4facfe');
-        energyGradient.addColorStop(1, 'rgba(79, 172, 254, 0)');
-        ctx.fillStyle = energyGradient;
-        ctx.beginPath();
-        ctx.arc(fieldX, fieldY, 100, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.globalAlpha = weather.rainIntensity * 0.3;
+        ctx.strokeStyle = '#a0a0c0';
+        ctx.lineWidth = 1;
+        
+        for (let i = 0; i < 50 * weather.rainIntensity; i++) {
+          const x = (i * 23 + time * 100) % (canvas.width + 50);
+          const y = (i * 17 + time * 200) % (canvas.height + 50);
+          
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - 3, y + 15);
+          ctx.stroke();
+        }
         ctx.restore();
       }
       
-      // 8. Distant futuristic city skyline
-      ctx.save();
-      ctx.globalAlpha = 0.3;
+      // Fog effect
+      if (weather.fogDensity > 0) {
+        ctx.save();
+        ctx.globalAlpha = weather.fogDensity * 0.2;
+        
+        const fogGradient = ctx.createLinearGradient(0, canvas.height * 0.6, 0, canvas.height);
+        fogGradient.addColorStop(0, 'rgba(150, 150, 180, 0)');
+        fogGradient.addColorStop(1, 'rgba(150, 150, 180, 0.8)');
+        
+        ctx.fillStyle = fogGradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+    }
+    
+    // Atmospheric lighting effects
+    function drawAtmosphericLighting(ctx, canvas, time, timeOfDay) {
+      const lighting = lightingSystem.current;
       
-      // Draw city buildings
-      const buildingHeights = [60, 80, 45, 90, 55, 75, 65, 85, 50, 70];
-      const buildingWidth = canvas.width / buildingHeights.length;
+      // City glow effect
+      ctx.save();
+      ctx.globalAlpha = 0.3 * (1 - timeOfDay);
+      
+      const cityGlow = ctx.createRadialGradient(
+        canvas.width * 0.5, canvas.height * 0.8, 0,
+        canvas.width * 0.5, canvas.height * 0.8, canvas.width * 0.6
+      );
+      cityGlow.addColorStop(0, 'rgba(255, 200, 100, 0.2)');
+      cityGlow.addColorStop(1, 'rgba(255, 200, 100, 0)');
+      
+      ctx.fillStyle = cityGlow;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Lightning flashes
+      if (lighting.lightning.active) {
+        ctx.globalAlpha = lighting.lightning.intensity;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Decrease lightning intensity
+        lighting.lightning.intensity *= 0.7;
+        if (lighting.lightning.intensity < 0.1) {
+          lighting.lightning.active = false;
+        }
+      }
+      
+      // Random lightning trigger
+      if (Math.random() < 0.001) {
+        lighting.lightning.active = true;
+        lighting.lightning.intensity = 0.3 + Math.random() * 0.4;
+      }
+      
+      ctx.restore();
+    }
+
+    // Atmospheric background functions would go here if needed
+    
+    function createParticles(x, y, color, count = 4, type = 'normal') {
       
       buildingHeights.forEach((height, index) => {
         const x = index * buildingWidth;
@@ -4107,7 +4206,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
 
     function loop() {
       try {
-        console.log('🔄 Game loop tick - isPaused:', isPaused, 'gameOver:', gameOver.active, 'spritesLoaded:', spritesLoaded);
+        // Game loop running silently for performance
         
         if (!isPaused && !gameOver.active) {
           // Always run the game, use fallback rendering if sprites not loaded
