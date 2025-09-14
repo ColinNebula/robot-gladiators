@@ -81,7 +81,7 @@ class SpriteAnimation {
     // Enhanced visual effects
     this.effects = {
       shadow: { enabled: true, offsetX: 2, offsetY: 2, blur: 4, alpha: 0.3 },
-      glow: { enabled: false, color: '#ffffff', blur: 10, alpha: 0.6 },
+      glow: { enabled: true, color: '#ffffff', blur: 15, alpha: 0.4 },
       shake: { enabled: false, intensity: 0, duration: 0, timer: 0 },
       bounce: { enabled: false, amplitude: 2, frequency: 0.1, offset: 0 },
       trail: { enabled: false, positions: [], maxLength: 5, fadeRate: 0.2 },
@@ -94,7 +94,7 @@ class SpriteAnimation {
       // New advanced effects
       afterimage: { enabled: false, positions: [], maxLength: 3, opacity: 0.3 },
       screenFlash: { enabled: false, color: '#ffffff', intensity: 0, duration: 0 },
-      aura: { enabled: false, color: '#00ffff', radius: 50, pulse: true, intensity: 0.5 },
+      aura: { enabled: true, color: '#00ffff', radius: 60, pulse: true, intensity: 0.3 },
       distortion: { enabled: false, amount: 0, type: 'wave' }
     };
     
@@ -1175,6 +1175,186 @@ const SideScroller = ({ character, onBackToMenu }) => {
   const weatherEffects = useRef({ rain: [], fog: [], wind: 0 });
   const atmosphericLayers = useRef({ near: [], far: [], particles: [] });
   
+  // Particle creation function - moved to component level for accessibility
+  const createParticles = React.useCallback((x, y, color, count = 4, type = 'normal') => {
+    // Only log if particles exceed reasonable limit
+    if (particlesRef.current.length > 100) {
+      console.warn(`⚠️ High particle count: ${particlesRef.current.length} - Creating ${count} more ${type} particles`);
+    }
+    
+    // Limit total particle count to prevent performance issues
+    if (particlesRef.current.length > 200) {
+      console.warn('🚫 Particle limit reached - skipping creation');
+      return;
+    }
+    
+    const newParticles = [];
+    
+    for (let i = 0; i < count; i++) {
+      let particle;
+      
+      if (type === 'explosion') {
+        // Explosive burst particles - radial spread
+        const angle = (i / count) * Math.PI * 2;
+        const speed = 2 + Math.random() * 4;
+        const life = 30 + Math.random() * 20; // Optimized shorter life
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 15,
+          y: y + (Math.random() - 0.5) * 15,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: color || '#ff4444',
+          size: 4 + Math.random() * 4,
+          type: 'explosion'
+        };
+      } else if (type === 'hit') {
+        // Impact particles - directional spray
+        const baseAngle = Math.random() * Math.PI * 2;
+        const spread = Math.PI / 3; // 60 degree spread
+        const angle = baseAngle + (Math.random() - 0.5) * spread;
+        const speed = 1.5 + Math.random() * 3;
+        const life = 20 + Math.random() * 15;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 8,
+          y: y + (Math.random() - 0.5) * 8,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: color || '#ffaa00',
+          size: 2 + Math.random() * 3,
+          type: 'hit'
+        };
+      } else if (type === 'smoke') {
+        // Smoke particles - rising effect
+        const angle = (Math.random() - 0.5) * Math.PI / 4; // 45 degree spread
+        const speed = 0.5 + Math.random() * 1.5;
+        const life = 40 + Math.random() * 20;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 12,
+          y: y + (Math.random() - 0.5) * 12,
+          vx: Math.cos(angle) * speed * 0.5,
+          vy: -Math.abs(Math.sin(angle) * speed), // Always rise
+          life: life,
+          maxLife: life,
+          color: color || '#666666',
+          size: 3 + Math.random() * 4,
+          type: 'smoke'
+        };
+      } else if (type === 'fire') {
+        // Fire particles - rising flames with flicker
+        const angle = (Math.random() - 0.5) * Math.PI / 6; // 30 degree spread
+        const speed = 1 + Math.random() * 2.5;
+        const life = 35 + Math.random() * 25;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 8,
+          y: y + (Math.random() - 0.5) * 6,
+          vx: Math.cos(angle) * speed * 0.3,
+          vy: -Math.abs(Math.sin(angle) * speed), // Always rise
+          life: life,
+          maxLife: life,
+          color: ['#ff4444', '#ff6600', '#ffaa00', '#ff8800', '#ff2200'][Math.floor(Math.random() * 5)],
+          size: 2 + Math.random() * 3,
+          type: 'fire',
+          flicker: true,
+          heat: 1.0,
+          gravity: -0.02 // Slight upward pull
+        };
+      } else if (type === 'ice') {
+        // Ice particles - crystalline shards with shimmer
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.8 + Math.random() * 2;
+        const life = 45 + Math.random() * 30;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 10,
+          y: y + (Math.random() - 0.5) * 8,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: ['#88ddff', '#aaeeff', '#ccf5ff', '#ffffff', '#77ccee'][Math.floor(Math.random() * 5)],
+          size: 1 + Math.random() * 2.5,
+          type: 'ice',
+          shimmer: true,
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.1,
+          gravity: 0.015 // Slight downward pull
+        };
+      } else if (type === 'frost') {
+        // Frost particles - slow floating crystals
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.3 + Math.random() * 1;
+        const life = 60 + Math.random() * 40;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 15,
+          y: y + (Math.random() - 0.5) * 12,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed * 0.5,
+          life: life,
+          maxLife: life,
+          color: ['#e6f3ff', '#ffffff', '#cce7ff', '#b3d9ff'][Math.floor(Math.random() * 4)],
+          size: 0.5 + Math.random() * 1.5,
+          type: 'frost',
+          drift: true,
+          twinkle: Math.random() > 0.5,
+          gravity: -0.005 // Very slight upward drift
+        };
+      } else if (type === 'ember') {
+        // Ember particles - glowing sparks
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 3;
+        const life = 30 + Math.random() * 20;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 6,
+          y: y + (Math.random() - 0.5) * 6,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: ['#ff6600', '#ff4400', '#ff8800', '#ffaa00'][Math.floor(Math.random() * 4)],
+          size: 1 + Math.random() * 2,
+          type: 'ember',
+          glow: true,
+          sparkle: true,
+          gravity: 0.01
+        };
+      } else {
+        // Default particles - standard behavior
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.5 + Math.random() * 2;
+        const life = 25 + Math.random() * 15;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 10,
+          y: y + (Math.random() - 0.5) * 10,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: color || '#ffffff',
+          size: 2 + Math.random() * 2,
+          type: 'normal'
+        };
+      }
+      
+      newParticles.push(particle);
+    }
+    
+    // Add new particles to the ref array
+    particlesRef.current = [...particlesRef.current, ...newParticles];
+    
+    console.log(`✨ Created ${newParticles.length} ${type} particles at (${x}, ${y}) - Total: ${particlesRef.current.length}`);
+  }, []);
+
   // Enable sprite debugging via console: window.DEBUG_SPRITES = true
   useEffect(() => {
     window.DEBUG_SPRITES = true; // Temporarily enabled for debugging sprites
@@ -1581,6 +1761,43 @@ const SideScroller = ({ character, onBackToMenu }) => {
     });
     
     console.log('Enhanced sprite animations initialized');
+    
+    // Initialize game state to ensure UI elements appear immediately
+    console.log('🎬 Initializing game UI elements...');
+    
+    // Create some initial atmospheric particles for visual feedback
+    setTimeout(() => {
+      if (particlesRef.current.length === 0) {
+        console.log('🌟 Creating initial atmospheric particles...');
+        createParticles(200, 300, '#4facfe', 3, 'sparkle');
+        createParticles(800, 250, '#ff6600', 2, 'ember');
+        createParticles(600, 200, '#88ddff', 4, 'frost');
+      }
+    }, 100);
+    
+  }, [createParticles]);
+
+  // Force initial state visibility
+  useEffect(() => {
+    console.log('🎯 Ensuring round announcement visibility...');
+    
+    // Make sure round announcement is properly initialized and visible
+    setTimeout(() => {
+      setRoundAnnouncement(prev => {
+        console.log('Round announcement current state:', prev);
+        if (!prev.active) {
+          console.log('🔄 Reactivating round announcement for visibility');
+          return {
+            ...prev,
+            active: true,
+            phase: 'announcing',
+            timer: 180,
+            roundToShow: 1
+          };
+        }
+        return prev;
+      });
+    }, 50);
   }, []);
 
   // Main game loop useEffect
@@ -1601,6 +1818,11 @@ const SideScroller = ({ character, onBackToMenu }) => {
     function draw() {
       try {
         // Enhanced rendering with performance optimizations
+        
+        // Debug logging for initial frames
+        if (gameStateRef.current.frameCount < 5) {
+          console.log(`🎨 Draw called - Frame ${gameStateRef.current.frameCount}, Round announcement active: ${roundAnnouncement.active}, Particles: ${particlesRef.current.length}`);
+        }
         
         // Optimized canvas clearing
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1658,10 +1880,10 @@ const SideScroller = ({ character, onBackToMenu }) => {
       
       // Main ground platform
       const groundGradient = ctx.createLinearGradient(0, GROUND_Y, 0, GROUND_Y + 40);
-      groundGradient.addColorStop(0, '#4a4a6a');
-      groundGradient.addColorStop(0.3, '#333355');
-      groundGradient.addColorStop(0.7, '#2a2a3a');
-      groundGradient.addColorStop(1, '#1a1a2a');
+      groundGradient.addColorStop(0, '#6a6a8a');
+      groundGradient.addColorStop(0.3, '#555575');
+      groundGradient.addColorStop(0.7, '#4a4a5a');
+      groundGradient.addColorStop(1, '#3a3a4a');
       ctx.fillStyle = groundGradient;
       ctx.fillRect(0, GROUND_Y, canvas.width, 40);
       
@@ -2386,6 +2608,131 @@ const SideScroller = ({ character, onBackToMenu }) => {
                 ctx.stroke();
                 ctx.shadowBlur = 0;
                 
+              } else if (particle.type === 'fire') {
+                // Fire particles with dynamic flames
+                ctx.save();
+                ctx.translate(particle.x, particle.y);
+                
+                // Parse color from particle
+                const fireColors = ['#ff4444', '#ff6600', '#ffaa00', '#ff8800', '#ff2200'];
+                const baseColor = particle.color || '#ff6600';
+                
+                // Outer flame glow
+                ctx.shadowColor = '#ff4400';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = baseColor.replace('rgb', 'rgba').replace(')', ', 0.8)');
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size * 1.2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner flame core
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#ffaa00';
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Hot center
+                ctx.shadowBlur = 5;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+                
+              } else if (particle.type === 'ember') {
+                // Ember particles with glow and sparkle
+                ctx.save();
+                ctx.translate(particle.x, particle.y);
+                
+                const emberAlpha = alpha * 0.9;
+                
+                // Ember glow
+                ctx.shadowColor = '#ff6600';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = `rgba(255, 102, 0, ${emberAlpha})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Sparkle effect
+                if (particle.sparkle && Math.random() > 0.7) {
+                  ctx.shadowBlur = 20;
+                  ctx.fillStyle = `rgba(255, 255, 255, ${emberAlpha})`;
+                  ctx.beginPath();
+                  ctx.arc(0, 0, particle.size * 0.5, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+                
+              } else if (particle.type === 'ice') {
+                // Ice particles with crystalline effects
+                ctx.save();
+                ctx.translate(particle.x, particle.y);
+                ctx.rotate(particle.rotation || 0);
+                
+                const iceAlpha = alpha * 0.8;
+                
+                // Ice crystal glow
+                ctx.shadowColor = '#88ddff';
+                ctx.shadowBlur = 12;
+                ctx.fillStyle = `rgba(136, 221, 255, ${iceAlpha})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Crystalline structure
+                ctx.strokeStyle = `rgba(255, 255, 255, ${iceAlpha})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-particle.size, 0);
+                ctx.lineTo(particle.size, 0);
+                ctx.moveTo(0, -particle.size);
+                ctx.lineTo(0, particle.size);
+                ctx.stroke();
+                
+                // Shimmer effect
+                if (particle.shimmer && Math.random() > 0.6) {
+                  ctx.shadowBlur = 15;
+                  ctx.fillStyle = `rgba(255, 255, 255, ${iceAlpha * 0.7})`;
+                  ctx.beginPath();
+                  ctx.arc(0, 0, particle.size * 0.4, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+                
+              } else if (particle.type === 'frost') {
+                // Frost particles with subtle effects
+                ctx.save();
+                
+                const frostAlpha = alpha * 0.6;
+                
+                // Soft frost glow
+                ctx.shadowColor = '#e6f3ff';
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = `rgba(230, 243, 255, ${frostAlpha})`;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Twinkle effect
+                if (particle.twinkle && Math.random() > 0.8) {
+                  ctx.shadowBlur = 12;
+                  ctx.fillStyle = `rgba(255, 255, 255, ${frostAlpha})`;
+                  ctx.beginPath();
+                  ctx.arc(particle.x, particle.y, particle.size * 0.3, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+                
               } else {
                 // Normal particles with enhanced visibility
                 let fillColor = `rgba(255, 255, 100, ${alpha})`;
@@ -2627,10 +2974,10 @@ const SideScroller = ({ character, onBackToMenu }) => {
       const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.8);
       
       if (timeOfDay < 0.3) { // Night
-        skyGradient.addColorStop(0, `hsl(220, 50%, ${4 + timeOfDay * 8}%)`);
-        skyGradient.addColorStop(0.3, `hsl(210, 45%, ${6 + timeOfDay * 10}%)`);
-        skyGradient.addColorStop(0.7, `hsl(200, 40%, ${8 + timeOfDay * 12}%)`);
-        skyGradient.addColorStop(1, `hsl(190, 35%, ${10 + timeOfDay * 15}%)`);
+        skyGradient.addColorStop(0, `hsl(220, 50%, ${20 + timeOfDay * 15}%)`);
+        skyGradient.addColorStop(0.3, `hsl(210, 45%, ${25 + timeOfDay * 20}%)`);
+        skyGradient.addColorStop(0.7, `hsl(200, 40%, ${30 + timeOfDay * 25}%)`);
+        skyGradient.addColorStop(1, `hsl(190, 35%, ${35 + timeOfDay * 30}%)`);
       } else if (timeOfDay < 0.7) { // Twilight/Dawn
         skyGradient.addColorStop(0, `hsl(${30 + timeOfDay * 20}, 60%, ${15 + timeOfDay * 10}%)`);
         skyGradient.addColorStop(0.4, `hsl(${20 + timeOfDay * 30}, 55%, ${20 + timeOfDay * 15}%)`);
@@ -3093,140 +3440,6 @@ const SideScroller = ({ character, onBackToMenu }) => {
 
     // Atmospheric background functions would go here if needed
     
-    function createParticles(x, y, color, count = 4, type = 'normal') {
-      // Only log if particles exceed reasonable limit
-      if (particlesRef.current.length > 100) {
-        console.warn(`⚠️ High particle count: ${particlesRef.current.length} - Creating ${count} more ${type} particles`);
-      }
-      
-      // Limit total particle count to prevent performance issues
-      if (particlesRef.current.length > 200) {
-        console.warn('🚫 Particle limit reached - skipping creation');
-        return;
-      }
-      
-      const newParticles = [];
-      
-      for (let i = 0; i < count; i++) {
-        let particle;
-        
-        if (type === 'explosion') {
-          // Explosive burst particles - radial spread
-          const angle = (i / count) * Math.PI * 2;
-          const speed = 2 + Math.random() * 4;
-          const life = 30 + Math.random() * 20; // Optimized shorter life
-          
-          particle = {
-            x: x + (Math.random() - 0.5) * 15,
-            y: y + (Math.random() - 0.5) * 15,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 2 + Math.random() * 4,
-            type: 'explosion',
-            glow: true
-          };
-        } else if (type === 'hit') {
-          // Hit marker particles - quick flash
-          const angle = Math.random() * Math.PI * 2;
-          const speed = 1 + Math.random() * 2;
-          const life = 15 + Math.random() * 10;
-          
-          particle = {
-            x: x + (Math.random() - 0.5) * 5,
-            y: y + (Math.random() - 0.5) * 5,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: life,
-            maxLife: life,
-            color: '#ffffff',
-            size: 1 + Math.random() * 2,
-            type: 'hit',
-            flash: true
-          };
-        } else if (type === 'dust') {
-          // Dust particles for ground impacts
-          const angle = Math.random() * Math.PI * 2;
-          const speed = 0.5 + Math.random() * 1.5;
-          const life = 20 + Math.random() * 15;
-          
-          particle = {
-            x: x + (Math.random() - 0.5) * 10,
-            y: y + (Math.random() - 0.5) * 10,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: life,
-            maxLife: life,
-            color: '#8B7355',
-            size: 1 + Math.random() * 3,
-            type: 'dust',
-            drift: true
-          };
-        } else if (type === 'trail') {
-          // Trail particles for fast movement
-          const life = 12 + Math.random() * 8;
-          
-          particle = {
-            x: x + (Math.random() - 0.5) * 8,
-            y: y + (Math.random() - 0.5) * 8,
-            vx: (Math.random() - 0.5) * 1,
-            vy: (Math.random() - 0.5) * 1,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 1 + Math.random() * 2,
-            type: 'trail',
-            fadeRate: 0.15
-          };
-        } else if (type === 'sparkle') {
-          // Sparkle particles for special items/effects
-          const life = 40 + Math.random() * 20;
-          
-          particle = {
-            x: x + (Math.random() - 0.5) * 20,
-            y: y + (Math.random() - 0.5) * 20,
-            vx: (Math.random() - 0.5) * 1,
-            vy: -(Math.random() * 2),
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 2 + Math.random() * 3,
-            type: 'sparkle',
-            twinkle: true
-          };
-        } else {
-          // Default normal particles
-          const angle = Math.random() * Math.PI * 2;
-          const speed = 1 + Math.random() * 3;
-          const life = 25 + Math.random() * 15;
-          
-          particle = {
-            x: x + (Math.random() - 0.5) * 10,
-            y: y + (Math.random() - 0.5) * 10,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 3 + Math.random() * 5,
-            type: 'normal'
-          };
-        }
-        
-        newParticles.push(particle);
-      }
-      
-      const previousCount = particlesRef.current.length;
-      particlesRef.current.push(...newParticles);
-      
-      // Only log significant particle additions
-      if (particlesRef.current.length > previousCount + 5) {
-        console.log(`✅ PARTICLES ADDED: ${previousCount} -> ${particlesRef.current.length}`);
-      }
-    }
-
     // Enhanced projectile system with multiple types
     function fireProjectile(shooter, direction, type = 'normal') {
           const speed = 2 + Math.random() * 4;
@@ -3526,6 +3739,45 @@ const SideScroller = ({ character, onBackToMenu }) => {
           bounce: false,
           piercing: false,
           homing: true
+        },
+        fire: {
+          speed: 6,
+          size: 7,
+          damage: 1.0,
+          life: 110,
+          color: shooter === playerRef.current ? '#ff6600' : '#ff4444',
+          gravity: -0.01, // Slight upward drift like flames
+          bounce: false,
+          piercing: false,
+          homing: false,
+          particleType: 'fire',
+          trailEffect: true
+        },
+        ice: {
+          speed: 5,
+          size: 6,
+          damage: 0.8,
+          life: 140,
+          color: shooter === playerRef.current ? '#88ddff' : '#aaeeff',
+          gravity: 0.03, // Falls like ice
+          bounce: false,
+          piercing: false,
+          homing: false,
+          particleType: 'ice',
+          freezeEffect: true
+        },
+        ember: {
+          speed: 4,
+          size: 5,
+          damage: 0.6,
+          life: 90,
+          color: shooter === playerRef.current ? '#ff8800' : '#ff6600',
+          gravity: 0.01,
+          bounce: true,
+          piercing: false,
+          homing: false,
+          particleType: 'ember',
+          sparkleTrail: true
         }
       };
       
@@ -3827,6 +4079,50 @@ const SideScroller = ({ character, onBackToMenu }) => {
               newParticle.y = GROUND_Y - 10;
               newParticle.vy *= -0.5; // Bounce factor
               newParticle.vx *= 0.8;
+            }
+            break;
+            
+          case 'fire':
+            // Fire particles rise and flicker
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += particle.gravity || -0.02; // Rise upward
+            newParticle.vx *= 0.95;
+            // Add flickering effect
+            if (particle.flicker) {
+              newParticle.size = Math.max(0.5, particle.size + (Math.random() - 0.5) * 0.8);
+            }
+            break;
+            
+          case 'ember':
+            // Ember particles with gravity and sparkle
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += particle.gravity || 0.01;
+            newParticle.vx *= 0.97;
+            break;
+            
+          case 'ice':
+            // Ice particles with rotation and shimmer
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += particle.gravity || 0.015;
+            newParticle.vx *= 0.98;
+            if (particle.rotationSpeed !== undefined) {
+              newParticle.rotation += particle.rotationSpeed;
+            }
+            break;
+            
+          case 'frost':
+            // Frost particles drift slowly
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += particle.gravity || -0.005; // Slight upward drift
+            newParticle.vx *= 0.99;
+            // Add drifting motion
+            if (particle.drift) {
+              newParticle.vx += (Math.random() - 0.5) * 0.02;
+              newParticle.vy += (Math.random() - 0.5) * 0.01;
             }
             break;
             
@@ -4560,6 +4856,21 @@ const SideScroller = ({ character, onBackToMenu }) => {
                 createParticles(projectile.x, projectile.y, '#ff8800', 3, 'debris');
               } else if (projectile.type === 'plasma') {
                 createParticles(projectile.x, projectile.y, projectile.color, 3, 'debris');
+              } else if (projectile.type === 'fire') {
+                // Fire projectile creates burning effects
+                createParticles(projectile.x, projectile.y, '#ff6600', 5, 'fire');
+                createParticles(projectile.x, projectile.y, '#ff8800', 3, 'ember');
+                createParticles(projectile.x, projectile.y, '#ff4444', 2, 'smoke');
+                setScreenShake({ active: true, intensity: 8 + baseKnockback, timer: 12 });
+              } else if (projectile.type === 'ice') {
+                // Ice projectile creates freezing effects
+                createParticles(projectile.x, projectile.y, '#88ddff', 4, 'ice');
+                createParticles(projectile.x, projectile.y, '#aaeeff', 6, 'frost');
+                createParticles(projectile.x, projectile.y, '#ffffff', 2, 'sparkle');
+              } else if (projectile.type === 'ember') {
+                // Ember projectile creates scattered burning particles
+                createParticles(projectile.x, projectile.y, '#ff8800', 4, 'ember');
+                createParticles(projectile.x, projectile.y, '#ff6600', 2, 'fire');
               } else if (projectile.type === 'homing') {
                 // Homing projectiles create directional knockback particles
                 createParticles(projectile.x + knockbackDirection * 20, projectile.y, projectile.color, 4, 'spark');
@@ -4682,16 +4993,8 @@ const SideScroller = ({ character, onBackToMenu }) => {
       
       // Keep particles visible during pause by updating their visual effects
       // but don't update physics (position, velocity, etc.)
-      setParticles(prev => {
-        return prev.map(particle => {
-          // Only update visual properties, not physics
-          return {
-            ...particle,
-            // Keep particles alive during pause by not decrementing life
-            // Update any visual effects that should continue during pause
-          };
-        });
-      });
+      // Note: Particles are managed via particlesRef, not state
+      // During pause, we maintain particle visual state without physics updates
       
       // Keep projectiles visible during pause by preserving their trails
       // Don't update physics, just maintain visual state
@@ -4731,6 +5034,14 @@ const SideScroller = ({ character, onBackToMenu }) => {
           draw();
         }
         
+        // ALWAYS ensure critical UI elements are visible
+        // This fixes the issue where elements only appear after pause
+        if (frameCount < 10) {
+          // Force draw on first few frames to ensure everything is visible
+          console.log(`🎨 Force draw frame ${frameCount} to ensure UI visibility`);
+          draw();
+        }
+        
         // Performance monitoring - calculate FPS every 60 frames
         if (frameCount % 60 === 0) {
           const fps = Math.round(1000 / deltaTime);
@@ -4755,8 +5066,17 @@ const SideScroller = ({ character, onBackToMenu }) => {
       animationFrameId = requestAnimationFrame(loop);
     }
     console.log('🚀 Starting game loop...');
-    loop();
     
+    // Force an initial draw to ensure UI elements appear immediately
+    try {
+      console.log('🎨 Forcing initial draw...');
+      draw();
+    } catch (initialDrawError) {
+      console.warn('⚠️ Initial draw failed, will retry in game loop:', initialDrawError);
+    }
+    
+    loop();
+
     return () => {
       console.log('🛑 Cleaning up game loop...');
       cancelAnimationFrame(animationFrameId);
@@ -4952,6 +5272,24 @@ const SideScroller = ({ character, onBackToMenu }) => {
         console.log('Keyboard: Homing projectile fired');
         fireProjectile(playerRef.current, playerRef.current.facing, 'homing');
         playerRef.current.attackCooldown = 60;
+        
+      } else if ((e.key === '4') && playerRef.current.attackCooldown === 0) {
+        // Fire projectile (4 key)
+        console.log('Keyboard: Fire projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'fire');
+        playerRef.current.attackCooldown = 30;
+        
+      } else if ((e.key === '5') && playerRef.current.attackCooldown === 0) {
+        // Ice projectile (5 key)
+        console.log('Keyboard: Ice projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'ice');
+        playerRef.current.attackCooldown = 40;
+        
+      } else if ((e.key === '6') && playerRef.current.attackCooldown === 0) {
+        // Ember projectile (6 key)
+        console.log('Keyboard: Ember projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'ember');
+        playerRef.current.attackCooldown = 25;
       
       } else if (e.key === 't' || e.key === 'T') {
         // Manual particle test (T key) - simulates character hit effects
@@ -5145,9 +5483,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
             leftKick: [0], // A button  
             rightKick: [1], // B button
             special: [4, 5], // LB and RB
-            pause: [7], // Menu button
+            pause: [9], // Menu button (was incorrectly set to 7)
             leftProjectile: [6], // LT trigger
-            rightProjectile: [7], // RT trigger (need to handle this differently)
+            rightProjectile: [7], // RT trigger (now free from pause conflict)
             heavy: [4, 5] // LB and RB
           },
           Generic: {
@@ -5343,21 +5681,13 @@ const SideScroller = ({ character, onBackToMenu }) => {
         // Enhanced projectile controls with different types
         const leftProjectilePressed = controls.leftProjectile?.some(btn => gp.buttons[btn]?.pressed);
         const lastLeftProjectilePressed = controls.leftProjectile?.some(btn => lastGamepadState.buttons[btn]);
+        const rightProjectilePressed = controls.rightProjectile?.some(btn => gp.buttons[btn]?.pressed);
+        const lastRightProjectilePressed = controls.rightProjectile?.some(btn => lastGamepadState.buttons[btn]);
         
         if (leftProjectilePressed && !lastLeftProjectilePressed && playerRef.current.attackCooldown === 0) {
           console.log(`${gamepadType} controller: Normal projectile fired`);
           fireProjectile(playerRef.current, playerRef.current.facing, 'normal');
           playerRef.current.attackCooldown = 20;
-        }
-        
-        // Handle R2/RT for power projectile
-        const rightProjectilePressed = controls.rightProjectile?.some(btn => gp.buttons[btn]?.pressed);
-        const lastRightProjectilePressed = controls.rightProjectile?.some(btn => lastGamepadState.buttons[btn]);
-          
-        if (rightProjectilePressed && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
-          console.log(`${gamepadType} controller: Power projectile fired`);
-          fireProjectile(playerRef.current, playerRef.current.facing, 'power');
-          playerRef.current.attackCooldown = 45;
         }
         
         // Face buttons for different projectile types
@@ -5388,6 +5718,36 @@ const SideScroller = ({ character, onBackToMenu }) => {
           playerRef.current.attackCooldown = 60;
         }
         
+        // Enhanced Fire & Ice projectiles using D-pad + trigger combinations
+        const dpadDown = gp.buttons[13]?.pressed; // D-pad down
+        const dpadUp = gp.buttons[12]?.pressed; // D-pad up
+        const dpadLeft = gp.buttons[14]?.pressed; // D-pad left
+        
+        // Fire projectile: D-pad Down + R2/RT
+        if (rightProjectilePressed && dpadDown && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: 🔥 Fire projectile fired (D-pad Down + R2)`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'fire');
+          playerRef.current.attackCooldown = 30;
+        }
+        // Ice projectile: D-pad Up + R2/RT  
+        else if (rightProjectilePressed && dpadUp && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: ❄️ Ice projectile fired (D-pad Up + R2)`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'ice');
+          playerRef.current.attackCooldown = 40;
+        }
+        // Ember projectile: D-pad Left + R2/RT
+        else if (rightProjectilePressed && dpadLeft && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: ✨ Ember projectile fired (D-pad Left + R2)`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'ember');
+          playerRef.current.attackCooldown = 25;
+        }
+        // Standard power projectile: R2/RT alone
+        else if (rightProjectilePressed && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: Power projectile fired`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'power');
+          playerRef.current.attackCooldown = 45;
+        }
+
         // Pause (Options/Menu button)
         const pausePressed = controls.pause.some(btn => gp.buttons[btn]?.pressed);
         const lastPausePressed = controls.pause.some(btn => lastGamepadState.buttons[btn]);
@@ -5521,7 +5881,37 @@ const SideScroller = ({ character, onBackToMenu }) => {
 
   return (
     <div style={{ textAlign: 'center', marginTop: '2rem', position: 'relative' }}>
-      <canvas ref={canvasRef} width={1200} height={500} style={{ background: 'linear-gradient(180deg, #1a1a3a 60%, #222 100%)', borderRadius: '12px', boxShadow: '0 2px 16px #0008', maxWidth: '100%' }} />
+      <canvas ref={canvasRef} width={1200} height={500} style={{ background: 'linear-gradient(180deg, #3a3a5a 60%, #444 100%)', borderRadius: '12px', boxShadow: '0 2px 16px #0008', maxWidth: '100%' }} />
+      
+      {/* Enhanced Particle System Controls */}
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        left: '10px',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        padding: '10px',
+        borderRadius: '8px',
+        color: '#fff',
+        fontSize: '0.9rem',
+        fontFamily: 'monospace',
+        pointerEvents: 'none'
+      }}>
+        <div style={{ marginBottom: '5px', color: '#4facfe', fontWeight: 'bold' }}>🔥❄️ Enhanced Particle System</div>
+        <div><strong>Keyboard:</strong></div>
+        <div>Q: Normal | R: Rapid | 1: Power</div>
+        <div>2: Plasma | 3: Homing</div>
+        <div style={{ color: '#ff6600' }}>4: 🔥 Fire | 5: ❄️ Ice | 6: ✨ Ember</div>
+        <div style={{ marginTop: '8px' }}><strong>🎮 Gamepad:</strong></div>
+        <div style={{ fontSize: '0.85rem' }}>L2: Normal | R2: Power</div>
+        <div style={{ fontSize: '0.85rem', color: '#ff6600' }}>
+          D-pad ⬇️+R2: 🔥 Fire | D-pad ⬆️+R2: ❄️ Ice | D-pad ⬅️+R2: ✨ Ember
+        </div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '5px' }}>
+          Fire: Rising flames + burning effects<br/>
+          Ice: Crystalline shards + frost trails<br/>
+          Ember: Sparkling projectiles + glowing particles
+        </div>
+      </div>
       
       {/* Pause Overlay */}
       {isPaused && !gameOver.active && (

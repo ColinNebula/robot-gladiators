@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useGame } from '../context/GameContext';
+import useGamepadNavigation from '../hooks/useGamepadNavigation';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const LeaderboardPage = () => {
   const { currentTheme } = useTheme();
   const { state: gameState } = useGame();
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('score');
   const [isLoading, setIsLoading] = useState(true);
   const [leaderboardData, setLeaderboardData] = useState([]);
@@ -17,6 +20,35 @@ const LeaderboardPage = () => {
     { id: 'damage', label: 'Total Damage', icon: '💥' },
     { id: 'achievements', label: 'Achievements', icon: '🏆' }
   ];
+
+  // Navigation items for gamepad
+  const getNavigationItems = () => {
+    const items = [];
+    categories.forEach(category => {
+      items.push(`category-${category.id}`);
+    });
+    items.push('back-to-menu');
+    return items;
+  };
+
+  // Gamepad navigation setup
+  const {
+    isGamepadConnected,
+    isSelected
+  } = useGamepadNavigation(getNavigationItems(), {
+    onSelect: (item) => {
+      if (item.startsWith('category-')) {
+        const categoryId = item.replace('category-', '');
+        setSelectedCategory(categoryId);
+      } else if (item === 'back-to-menu') {
+        navigate('/');
+      }
+    },
+    onBack: () => {
+      navigate('/');
+    },
+    wrapAround: true
+  });
 
   useEffect(() => {
     // Simulate loading leaderboard data

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
+import useGamepadNavigation from '../hooks/useGamepadNavigation';
 
 const SinglePlayerPage = () => {
   const navigate = useNavigate();
@@ -115,6 +116,66 @@ const SinglePlayerPage = () => {
 
   const selectedChapterData = campaignChapters.find(chapter => chapter.id === selectedChapter);
 
+  // Create navigation items based on current view mode
+  const getNavigationItems = () => {
+    const items = [];
+    
+    // View mode toggles
+    items.push('campaigns', 'difficulty');
+    
+    if (viewMode === 'campaigns') {
+      // Add unlocked chapters
+      campaignChapters.forEach(chapter => {
+        if (chapter.unlocked) {
+          items.push(`chapter-${chapter.id}`);
+        }
+      });
+    } else {
+      // Add difficulty options
+      difficultyLevels.forEach(diff => {
+        items.push(`difficulty-${diff.id}`);
+      });
+    }
+    
+    // Always add start and back buttons
+    items.push('start-game', 'back-to-menu');
+    
+    return items;
+  };
+
+  // Gamepad navigation setup
+  const {
+    selectedIndex,
+    isGamepadConnected,
+    isSelected
+  } = useGamepadNavigation(getNavigationItems(), {
+    onSelect: (item) => {
+      if (item === 'campaigns') {
+        setViewMode('campaigns');
+      } else if (item === 'difficulty') {
+        setViewMode('difficulty');
+      } else if (item.startsWith('chapter-')) {
+        const chapterId = parseInt(item.replace('chapter-', ''));
+        const chapter = campaignChapters.find(c => c.id === chapterId);
+        if (chapter && chapter.unlocked) {
+          setSelectedChapter(chapterId);
+        }
+      } else if (item.startsWith('difficulty-')) {
+        const diffId = item.replace('difficulty-', '');
+        setSelectedDifficulty(diffId);
+      } else if (item === 'start-game') {
+        handleStartGame();
+      } else if (item === 'back-to-menu') {
+        navigate('/');
+      }
+    },
+    onBack: () => {
+      navigate('/');
+    },
+    wrapAround: true,
+    enabled: !isLoading
+  });
+
   const handleStartGame = () => {
     setIsLoading(true);
     
@@ -214,9 +275,25 @@ const SinglePlayerPage = () => {
           WebkitBackgroundClip: 'text',
           color: 'transparent',
           marginBottom: '1rem',
-          letterSpacing: '0.02em'
+          letterSpacing: '0.02em',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '1rem'
         }}>
           Campaign Mode
+          {isGamepadConnected && (
+            <motion.span
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              style={{
+                fontSize: '2rem',
+                filter: `drop-shadow(0 0 15px ${currentTheme.colors.primary})`
+              }}
+            >
+              🎮
+            </motion.span>
+          )}
         </h1>
 
         <p style={{
@@ -315,7 +392,9 @@ const SinglePlayerPage = () => {
                   : `${currentTheme.colors.surface}80`,
                 border: viewMode === mode.id 
                   ? 'none' 
-                  : `3px solid ${currentTheme.colors.primary}30`,
+                  : isSelected(getNavigationItems().indexOf(mode.id))
+                    ? `3px solid ${currentTheme.colors.primary}`
+                    : `3px solid ${currentTheme.colors.primary}30`,
                 borderRadius: '18px',
                 padding: '1rem 2rem',
                 color: viewMode === mode.id ? '#fff' : currentTheme.colors.text,
@@ -329,7 +408,10 @@ const SinglePlayerPage = () => {
                 backdropFilter: 'blur(15px)',
                 boxShadow: viewMode === mode.id 
                   ? `0 8px 25px ${currentTheme.colors.primary}40` 
-                  : '0 4px 15px rgba(0, 0, 0, 0.1)'
+                  : isSelected(getNavigationItems().indexOf(mode.id))
+                    ? `0 0 20px ${currentTheme.colors.primary}60`
+                    : '0 4px 15px rgba(0, 0, 0, 0.1)',
+                transform: isSelected(getNavigationItems().indexOf(mode.id)) ? 'scale(1.05)' : 'scale(1)'
               }}
             >
               <span style={{ fontSize: '1.3rem' }}>{mode.icon}</span>
@@ -389,6 +471,8 @@ const SinglePlayerPage = () => {
                       : `${currentTheme.colors.surface}50`,
                     border: selectedChapter === chapter.id && chapter.unlocked
                       ? `4px solid ${chapter.theme.primary}`
+                      : isSelected(getNavigationItems().indexOf(`chapter-${chapter.id}`))
+                      ? `4px solid ${currentTheme.colors.primary}`
                       : chapter.unlocked
                       ? `3px solid ${currentTheme.colors.border}30`
                       : `2px solid ${currentTheme.colors.border}15`,
@@ -402,7 +486,10 @@ const SinglePlayerPage = () => {
                     opacity: chapter.unlocked ? 1 : 0.6,
                     boxShadow: selectedChapter === chapter.id && chapter.unlocked
                       ? `0 15px 35px ${chapter.theme.primary}25`
-                      : '0 8px 25px rgba(0, 0, 0, 0.1)'
+                      : isSelected(getNavigationItems().indexOf(`chapter-${chapter.id}`))
+                      ? `0 0 25px ${currentTheme.colors.primary}50`
+                      : '0 8px 20px rgba(0, 0, 0, 0.15)',
+                    transform: isSelected(getNavigationItems().indexOf(`chapter-${chapter.id}`)) ? 'scale(1.02) translateY(-8px)' : 'scale(1) translateY(0)'
                   }}
                 >
                   {/* Background Gradient Overlay */}
@@ -623,6 +710,8 @@ const SinglePlayerPage = () => {
                       : `${currentTheme.colors.surface}90`,
                     border: selectedDifficulty === diff.id
                       ? `4px solid ${currentTheme.colors.primary}`
+                      : isSelected(getNavigationItems().indexOf(`difficulty-${diff.id}`))
+                      ? `4px solid ${currentTheme.colors.primary}`
                       : `3px solid ${currentTheme.colors.border}30`,
                     borderRadius: '20px',
                     padding: '2.5rem',
@@ -633,7 +722,10 @@ const SinglePlayerPage = () => {
                     backdropFilter: 'blur(15px)',
                     boxShadow: selectedDifficulty === diff.id
                       ? `0 12px 30px ${currentTheme.colors.primary}20`
-                      : '0 6px 20px rgba(0, 0, 0, 0.1)'
+                      : isSelected(getNavigationItems().indexOf(`difficulty-${diff.id}`))
+                      ? `0 0 25px ${currentTheme.colors.primary}40`
+                      : '0 6px 20px rgba(0, 0, 0, 0.1)',
+                    transform: isSelected(getNavigationItems().indexOf(`difficulty-${diff.id}`)) ? 'scale(1.02) translateY(-5px)' : 'scale(1) translateY(0)'
                   }}
                 >
                   <motion.div
@@ -762,7 +854,9 @@ const SinglePlayerPage = () => {
               background: selectedDifficulty && (viewMode !== 'campaigns' || selectedChapter)
                 ? currentTheme.gradients.primary
                 : `${currentTheme.colors.surface}60`,
-              border: 'none',
+              border: isSelected(getNavigationItems().indexOf('start-game'))
+                ? `3px solid ${currentTheme.colors.primary}`
+                : 'none',
               borderRadius: '20px',
               padding: '1.2rem 3rem',
               color: selectedDifficulty && (viewMode !== 'campaigns' || selectedChapter) 
@@ -779,8 +873,11 @@ const SinglePlayerPage = () => {
               gap: '0.8rem',
               opacity: selectedDifficulty && (viewMode !== 'campaigns' || selectedChapter) ? 1 : 0.5,
               boxShadow: selectedDifficulty && (viewMode !== 'campaigns' || selectedChapter)
-                ? `0 8px 25px ${currentTheme.colors.primary}30`
-                : '0 4px 15px rgba(0, 0, 0, 0.1)'
+                ? isSelected(getNavigationItems().indexOf('start-game'))
+                  ? `0 0 25px ${currentTheme.colors.primary}60`
+                  : `0 8px 25px ${currentTheme.colors.primary}30`
+                : '0 4px 15px rgba(0, 0, 0, 0.1)',
+              transform: isSelected(getNavigationItems().indexOf('start-game')) ? 'scale(1.05) translateY(-3px)' : 'scale(1) translateY(0)'
             }}
           >
             <span style={{ fontSize: '1.4rem' }}>🚀</span>
@@ -793,7 +890,9 @@ const SinglePlayerPage = () => {
             onClick={() => navigate('/')}
             style={{
               background: 'transparent',
-              border: `3px solid ${currentTheme.colors.primary}40`,
+              border: isSelected(getNavigationItems().indexOf('back-to-menu'))
+                ? `3px solid ${currentTheme.colors.primary}`
+                : `3px solid ${currentTheme.colors.primary}40`,
               borderRadius: '18px',
               padding: '1.2rem 2.5rem',
               color: currentTheme.colors.text,
@@ -805,7 +904,10 @@ const SinglePlayerPage = () => {
               alignItems: 'center',
               gap: '0.6rem',
               backdropFilter: 'blur(10px)',
-              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)'
+              boxShadow: isSelected(getNavigationItems().indexOf('back-to-menu'))
+                ? `0 0 20px ${currentTheme.colors.primary}50`
+                : '0 4px 15px rgba(0, 0, 0, 0.1)',
+              transform: isSelected(getNavigationItems().indexOf('back-to-menu')) ? 'scale(1.05) translateY(-3px)' : 'scale(1) translateY(0)'
             }}
           >
             <span style={{ fontSize: '1.2rem' }}>🏠</span>
