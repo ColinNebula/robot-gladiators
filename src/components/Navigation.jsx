@@ -157,7 +157,7 @@ const Navigation = () => {
           display: 'flex',
           alignItems: 'center',
           gap: '0.75rem',
-          fontSize: 'clamp(1.2rem, 4vw, 1.8rem)',
+          fontSize: 'clamp(1.4rem, 3.5vw, 2.2rem)',
           fontWeight: '900',
           fontFamily: '"Orbitron", "Exo 2", monospace',
           background: `linear-gradient(135deg, ${theme.colors.primary}, #00f2fe, #764ba2)`,
@@ -166,18 +166,20 @@ const Navigation = () => {
           WebkitBackgroundClip: 'text',
           color: 'transparent',
           textDecoration: 'none',
-          padding: 'clamp(0.5rem, 2vw, 0.75rem) clamp(0.8rem, 3vw, 1.5rem)',
+          padding: 'clamp(0.6rem, 1.8vw, 1rem) clamp(1rem, 2.5vw, 1.8rem)',
           borderRadius: '12px',
-          border: `2px solid ${theme.colors.primary}50`,
+          border: `2px solid ${theme.colors.primary}80`,
           backdropFilter: 'blur(10px)',
           boxShadow: `
-            0 4px 15px ${theme.colors.primary}25,
-            inset 0 1px 0 rgba(255, 255, 255, 0.1)
+            0 4px 15px ${theme.colors.primary}40,
+            inset 0 1px 0 rgba(255, 255, 255, 0.15),
+            0 0 0 1px ${theme.colors.primary}20
           `,
           position: 'relative',
           overflow: 'hidden',
           cursor: 'pointer',
-          letterSpacing: 'clamp(0.02em, 0.5vw, 0.05em)'
+          letterSpacing: 'clamp(0.03em, 0.4vw, 0.08em)',
+          minWidth: '180px'
         }}
         animate={{
           backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
@@ -211,7 +213,7 @@ const Navigation = () => {
         
         <motion.span
           style={{
-            fontSize: '2rem',
+            fontSize: 'clamp(1.8rem, 2.5vw, 2.5rem)',
             filter: 'drop-shadow(0 0 8px currentColor)',
             position: 'relative',
             zIndex: 2
@@ -227,7 +229,9 @@ const Navigation = () => {
         >
           ⚡
         </motion.span>
-        <span style={{
+        <span 
+          className="nav-logo"
+          style={{
           background: `linear-gradient(135deg, ${theme.colors.primary}, #00f2fe, #764ba2)`,
           backgroundSize: '200% 100%',
           backgroundClip: 'text',
@@ -236,7 +240,13 @@ const Navigation = () => {
           fontWeight: '900',
           position: 'relative',
           zIndex: 2,
-          textShadow: `0 0 20px ${theme.colors.primary}50`
+          textShadow: `0 0 20px ${theme.colors.primary}60`,
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+          // Fallback for browsers that don't support background-clip: text
+          '@supports not (background-clip: text)': {
+            color: theme.colors.primary,
+            background: 'none'
+          }
         }}>
           Nebula Wars
         </span>
