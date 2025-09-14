@@ -5,10 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nebula Wars</title>
+    <!-- Enhanced Typography Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
       @keyframes pulse {
         0%, 100% { opacity: 0.7; transform: scale(1); }
         50% { opacity: 1; transform: scale(1.05); }
+      }
+      
+      @keyframes shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
       }
       
       body {
@@ -16,6 +25,88 @@
         padding: 0;
         background: #000;
         font-family: Arial, sans-serif;
+      }
+
+      /* Enhanced text rendering for better clarity */
+      .enhanced-title {
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* Hardware acceleration for smooth animations */
+      .animated-element {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        perspective: 1000px;
+      }
+
+      /* Responsive Navigation Styles */
+      @media (max-width: 480px) {
+        .hide-mobile {
+          display: none !important;
+        }
+        /* Extra small screens - optimize for phones */
+        nav {
+          padding: 0 1rem !important;
+          height: 70px !important;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .hide-mobile {
+          display: none !important;
+        }
+        /* Mobile screens - optimize for tablets and large phones */
+        nav {
+          padding: 0 1.5rem !important;
+        }
+      }
+
+      @media (min-width: 769px) and (max-width: 1024px) {
+        /* Tablet screens - reduce navigation gaps */
+        .nav-desktop {
+          gap: 1.5rem !important;
+        }
+        .nav-items {
+          gap: 0.5rem !important;
+        }
+      }
+
+      @media (min-width: 769px) {
+        .hide-desktop {
+          display: none !important;
+        }
+      }
+
+      @media (min-width: 1025px) {
+        /* Desktop screens - full spacing */
+        .nav-desktop {
+          gap: 2rem !important;
+        }
+        .nav-items {
+          gap: 0.75rem !important;
+        }
+      }
+
+      /* Landscape orientation adjustments */
+      @media (orientation: landscape) and (max-height: 500px) {
+        nav {
+          height: 60px !important;
+        }
+        .mobile-menu {
+          max-height: 50vh !important;
+        }
+      }
+
+      /* Enhanced header animations */
+      @keyframes headerPulse {
+        0%, 100% { 
+          box-shadow: 0 0 20px rgba(79, 172, 254, 0.2);
+        }
+        50% { 
+          box-shadow: 0 0 40px rgba(79, 172, 254, 0.4);
+        }
       }
     </style>
   </head>

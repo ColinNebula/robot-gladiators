@@ -80,7 +80,8 @@ export function useGamepad() {
     isConnected,
     buttonState,
     axes,
-    gamepadType: gamepad ? detectGamepadType(gamepad) : null
+    gamepadType: gamepad ? detectGamepadType(gamepad) : null,
+    getButtonPressed: (buttonIndex) => buttonState[buttonIndex]?.pressed || false
   };
 }
 
