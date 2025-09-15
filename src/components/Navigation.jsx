@@ -32,6 +32,7 @@ const Navigation = () => {
     { path: '/', label: 'Home', icon: '🏠' },
     { path: '/play', label: 'Play', icon: '🎮' },
     { path: '/character-select', label: 'Characters', icon: '👤' },
+    { path: '/enhanced-demo', label: 'Engine Demo', icon: '🚀' },
     { path: '/leaderboard', label: 'Leaderboard', icon: '🏆' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
     { path: '/about', label: 'About', icon: 'ℹ️' }

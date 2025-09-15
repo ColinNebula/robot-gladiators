@@ -513,7 +513,16 @@ class SpriteAnimation {
     
     const currentImage = this.loadedImages.get(this.currentAnimation) || this.image;
     
+    // Enhanced debugging for sprite drawing issues
     if (!currentImage || !currentImage.complete || currentImage.naturalWidth === 0) {
+      console.log('🐛 Sprite draw fallback triggered:', {
+        currentAnimation: this.currentAnimation,
+        hasCurrentImage: !!currentImage,
+        imageComplete: currentImage?.complete,
+        naturalWidth: currentImage?.naturalWidth,
+        loadedImagesKeys: Array.from(this.loadedImages.keys()),
+        hasBaseImage: !!this.image
+      });
       this.drawFallback(ctx, x, y);
       return;
     }
@@ -1171,6 +1180,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
   const backgroundDebris = useRef([]);
   const backgroundBuildings = useRef([]);
   const backgroundLights = useRef([]);
+  const lightingSystem = useRef({ lightning: { active: false, intensity: 0 } });
   const weatherEffects = useRef({ rain: [], fog: [], wind: 0 });
   const atmosphericLayers = useRef({ near: [], far: [], particles: [] });
   
@@ -1339,6 +1349,14 @@ const SideScroller = ({ character, onBackToMenu }) => {
   // Initialize dynamic lighting system
   function initializeLightingSystem() {
     backgroundLights.current = [];
+    
+    // Initialize lighting system
+    lightingSystem.current = {
+      lightning: {
+        active: false,
+        intensity: 0
+      }
+    };
     
     // Street lights and city glow
     for (let i = 0; i < 15; i++) {
@@ -1535,18 +1553,6 @@ const SideScroller = ({ character, onBackToMenu }) => {
         ctx.fillStyle = '#333';
         ctx.fillRect(0, GROUND_Y, canvas.width, 40);
         
-        // Draw basic player rectangle if sprites not loaded
-        if (!spritesLoaded.player) {
-          ctx.fillStyle = '#00ff00';
-          ctx.fillRect(playerRef.current.x, playerRef.current.y, CHARACTER_WIDTH, CHARACTER_HEIGHT);
-        }
-        
-        // Draw basic enemy rectangle if sprites not loaded
-        if (!spritesLoaded.enemy) {
-          ctx.fillStyle = '#ff0000';
-          ctx.fillRect(enemyRef.current.x, enemyRef.current.y, CHARACTER_WIDTH, CHARACTER_HEIGHT);
-        }
-        
         console.log('✅ Frame drawn successfully');
         
       } catch (error) {
@@ -1649,9 +1655,23 @@ const SideScroller = ({ character, onBackToMenu }) => {
       }
       
       if (playerSpriteRef.current && spritesLoaded.player) {
-        const flipX = playerRef.current.facing === 'left';
-        playerSpriteRef.current.draw(ctx, playerRef.current.x, playerRef.current.y, flipX);
+        try {
+          const flipX = playerRef.current.facing === 'left';
+          playerSpriteRef.current.draw(ctx, playerRef.current.x, playerRef.current.y, flipX);
+        } catch (error) {
+          console.error('❌ Error drawing player sprite, falling back to rectangle:', error);
+          // Fall through to draw fallback rectangle
+          drawPlayerFallback();
+        }
       } else {
+        drawPlayerFallback();
+      }
+      
+      function drawPlayerFallback() {
+        // Debug info when sprites are not loaded
+        if (isPaused) {
+          console.log('⚠️ Player sprite not available during pause - spritesLoaded.player:', spritesLoaded.player, 'playerSpriteRef.current:', !!playerSpriteRef.current);
+        }
         // Enhanced fallback with gradient design
         const playerGradient = ctx.createLinearGradient(
           playerRef.current.x - 40, playerRef.current.y - 80,
@@ -1692,9 +1712,23 @@ const SideScroller = ({ character, onBackToMenu }) => {
       }
       
       if (enemySpriteRef.current && spritesLoaded.enemy) {
-        const flipX = enemyRef.current.facing === 'left';
-        enemySpriteRef.current.draw(ctx, enemyRef.current.x, enemyRef.current.y, flipX);
+        try {
+          const flipX = enemyRef.current.facing === 'left';
+          enemySpriteRef.current.draw(ctx, enemyRef.current.x, enemyRef.current.y, flipX);
+        } catch (error) {
+          console.error('❌ Error drawing enemy sprite, falling back to rectangle:', error);
+          // Fall through to draw fallback rectangle
+          drawEnemyFallback();
+        }
       } else {
+        drawEnemyFallback();
+      }
+      
+      function drawEnemyFallback() {
+        // Debug info when sprites are not loaded
+        if (isPaused) {
+          console.log('⚠️ Enemy sprite not available during pause - spritesLoaded.enemy:', spritesLoaded.enemy, 'enemySpriteRef.current:', !!enemySpriteRef.current);
+        }
         // Enhanced fallback with gradient design
         const enemyGradient = ctx.createLinearGradient(
           enemyRef.current.x - 40, enemyRef.current.y - 80,
@@ -2348,53 +2382,120 @@ const SideScroller = ({ character, onBackToMenu }) => {
     function drawAtmosphericBackground(ctx, canvas) {
       const time = Date.now() * 0.001;
       
-      // 1. Dynamic sky with realistic color transitions
-      const timeOfDay = (Math.sin(time * 0.1) + 1) * 0.5; // 0-1 cycle
+      // 1. Enhanced dynamic sky with more dramatic color transitions
+      const timeOfDay = (Math.sin(time * 0.05) + 1) * 0.5; // Slower, more realistic cycle
       const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.8);
       
-      if (timeOfDay < 0.3) { // Night
-        skyGradient.addColorStop(0, `hsl(220, 50%, ${4 + timeOfDay * 8}%)`);
-        skyGradient.addColorStop(0.3, `hsl(210, 45%, ${6 + timeOfDay * 10}%)`);
-        skyGradient.addColorStop(0.7, `hsl(200, 40%, ${8 + timeOfDay * 12}%)`);
-        skyGradient.addColorStop(1, `hsl(190, 35%, ${10 + timeOfDay * 15}%)`);
-      } else if (timeOfDay < 0.7) { // Twilight/Dawn
-        skyGradient.addColorStop(0, `hsl(${30 + timeOfDay * 20}, 60%, ${15 + timeOfDay * 10}%)`);
-        skyGradient.addColorStop(0.4, `hsl(${20 + timeOfDay * 30}, 55%, ${20 + timeOfDay * 15}%)`);
-        skyGradient.addColorStop(0.8, `hsl(${210 + timeOfDay * 20}, 40%, ${25 + timeOfDay * 20}%)`);
-        skyGradient.addColorStop(1, `hsl(${200 + timeOfDay * 15}, 35%, ${30 + timeOfDay * 25}%)`);
-      } else { // Day
-        skyGradient.addColorStop(0, `hsl(210, 70%, ${40 + timeOfDay * 20}%)`);
-        skyGradient.addColorStop(0.5, `hsl(200, 65%, ${50 + timeOfDay * 25}%)`);
-        skyGradient.addColorStop(1, `hsl(190, 60%, ${60 + timeOfDay * 30}%)`);
+      if (timeOfDay < 0.2) { // Deep Night
+        skyGradient.addColorStop(0, `hsl(220, 60%, ${2 + timeOfDay * 6}%)`);
+        skyGradient.addColorStop(0.2, `hsl(235, 55%, ${4 + timeOfDay * 8}%)`);
+        skyGradient.addColorStop(0.6, `hsl(245, 50%, ${6 + timeOfDay * 10}%)`);
+        skyGradient.addColorStop(1, `hsl(255, 45%, ${8 + timeOfDay * 12}%)`);
+      } else if (timeOfDay < 0.4) { // Late Night to Dawn
+        const dawnIntensity = (timeOfDay - 0.2) * 5;
+        skyGradient.addColorStop(0, `hsl(${220 + dawnIntensity * 10}, ${60 + dawnIntensity * 5}%, ${4 + dawnIntensity * 8}%)`);
+        skyGradient.addColorStop(0.3, `hsl(${30 + dawnIntensity * 15}, ${50 + dawnIntensity * 10}%, ${10 + dawnIntensity * 12}%)`);
+        skyGradient.addColorStop(0.7, `hsl(${45 + dawnIntensity * 5}, ${45 + dawnIntensity * 15}%, ${15 + dawnIntensity * 18}%)`);
+        skyGradient.addColorStop(1, `hsl(${210 + dawnIntensity * 8}, ${40 + dawnIntensity * 10}%, ${20 + dawnIntensity * 20}%)`);
+      } else if (timeOfDay < 0.7) { // Dawn to Day
+        const dayIntensity = (timeOfDay - 0.4) / 0.3;
+        skyGradient.addColorStop(0, `hsl(${195 + dayIntensity * 10}, ${70 + dayIntensity * 5}%, ${25 + dayIntensity * 20}%)`);
+        skyGradient.addColorStop(0.4, `hsl(${205 + dayIntensity * 5}, ${65 + dayIntensity * 10}%, ${35 + dayIntensity * 25}%)`);
+        skyGradient.addColorStop(0.8, `hsl(${215 + dayIntensity * 3}, ${60 + dayIntensity * 15}%, ${45 + dayIntensity * 30}%)`);
+        skyGradient.addColorStop(1, `hsl(${190 + dayIntensity * 5}, ${55 + dayIntensity * 20}%, ${55 + dayIntensity * 35}%)`);
+      } else { // Full Day
+        skyGradient.addColorStop(0, `hsl(210, 80%, ${50 + timeOfDay * 15}%)`);
+        skyGradient.addColorStop(0.3, `hsl(200, 75%, ${60 + timeOfDay * 12}%)`);
+        skyGradient.addColorStop(0.7, `hsl(190, 70%, ${70 + timeOfDay * 10}%)`);
+        skyGradient.addColorStop(1, `hsl(180, 65%, ${80 + timeOfDay * 8}%)`);
       }
       
       ctx.fillStyle = skyGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height * 0.8);
       
-      // 2. Realistic city skyline with multiple layers
+      // 1.5. Add sun/moon based on time of day
+      const celestialX = canvas.width * 0.75;
+      const celestialY = canvas.height * 0.15 + Math.sin(time * 0.2) * 20;
+      
+      if (timeOfDay > 0.3) {
+        // Sun
+        const sunSize = 25 + Math.sin(time * 0.3) * 3;
+        
+        // Sun halo
+        const haloGradient = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, sunSize * 2.5);
+        haloGradient.addColorStop(0, 'hsla(50, 100%, 70%, 0.4)');
+        haloGradient.addColorStop(0.5, 'hsla(45, 90%, 60%, 0.2)');
+        haloGradient.addColorStop(1, 'hsla(40, 80%, 50%, 0)');
+        
+        ctx.fillStyle = haloGradient;
+        ctx.beginPath();
+        ctx.arc(celestialX, celestialY, sunSize * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Sun body
+        ctx.fillStyle = '#ffeb3b';
+        ctx.shadowColor = '#ffeb3b';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(celestialX, celestialY, sunSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else {
+        // Moon
+        const moonSize = 20;
+        
+        // Moon glow
+        const moonGlow = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, moonSize * 1.8);
+        moonGlow.addColorStop(0, 'hsla(220, 50%, 80%, 0.3)');
+        moonGlow.addColorStop(1, 'hsla(220, 50%, 80%, 0)');
+        
+        ctx.fillStyle = moonGlow;
+        ctx.beginPath();
+        ctx.arc(celestialX, celestialY, moonSize * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Moon body
+        ctx.fillStyle = '#e3f2fd';
+        ctx.shadowColor = '#e3f2fd';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(celestialX, celestialY, moonSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Moon craters
+        ctx.fillStyle = '#bbdefb';
+        ctx.beginPath();
+        ctx.arc(celestialX - 6, celestialY - 4, 2.5, 0, Math.PI * 2);
+        ctx.arc(celestialX + 4, celestialY + 2, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // 2. Enhanced city skyline with dynamic lighting
       drawCityscape(ctx, canvas, time, timeOfDay);
       
-      // 3. Enhanced starfield with realistic twinkle
-      if (timeOfDay < 0.5) { // Only show stars at night/twilight
+      // 3. Enhanced starfield with atmospheric effects
+      if (timeOfDay < 0.6) { // Show stars during night/twilight
         backgroundStars.current.forEach(star => {
           const depth = star.layer;
-          const parallax = depth * 0.1;
-          const adjustedX = star.x + Math.sin(time * 0.1) * parallax;
+          const parallax = depth * 0.15;
+          const adjustedX = star.x + Math.sin(time * 0.08) * parallax;
           
-          const twinkle = Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.4 + 0.6;
-          const atmosphericDimming = Math.max(0, 1 - timeOfDay * 2);
+          const twinkle = Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.5 + 0.5;
+          const atmosphericDimming = Math.max(0, 1 - timeOfDay * 1.8);
           
           ctx.save();
-          ctx.globalAlpha = star.brightness * twinkle * atmosphericDimming * (1 - depth * 0.3);
-          ctx.fillStyle = star.color;
-          ctx.shadowColor = star.color;
-          ctx.shadowBlur = star.size * (2 + depth);
+          ctx.globalAlpha = star.brightness * twinkle * atmosphericDimming * (0.7 + depth * 0.3);
           
-          // Different star rendering based on size
-          if (star.size > 2) {
-            // Large stars with cross pattern
-            const crossSize = star.size * 4;
-            ctx.lineWidth = 1 + depth * 0.5;
+          // Enhanced star rendering with glow
+          ctx.shadowColor = star.color;
+          ctx.shadowBlur = star.size * (3 + depth * 2);
+          ctx.fillStyle = star.color;
+          
+          if (star.size > 2.5) {
+            // Bright stars with enhanced cross pattern
+            const crossSize = star.size * 5;
+            ctx.lineWidth = 1.5;
             ctx.strokeStyle = star.color;
             ctx.beginPath();
             ctx.moveTo(adjustedX - crossSize, star.y);
@@ -2404,12 +2505,29 @@ const SideScroller = ({ character, onBackToMenu }) => {
             ctx.stroke();
           }
           
-          // Core star
+          // Star core
           ctx.beginPath();
           ctx.arc(adjustedX, star.y, star.size, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         });
+        
+        // Add nebula effect during deep night
+        if (timeOfDay < 0.3) {
+          ctx.save();
+          ctx.globalAlpha = (0.3 - timeOfDay) * 1.2;
+          const nebulaGradient = ctx.createRadialGradient(
+            canvas.width * 0.7, canvas.height * 0.3, 0,
+            canvas.width * 0.7, canvas.height * 0.3, canvas.width * 0.4
+          );
+          nebulaGradient.addColorStop(0, 'hsla(270, 60%, 40%, 0.3)');
+          nebulaGradient.addColorStop(0.5, 'hsla(290, 50%, 30%, 0.15)');
+          nebulaGradient.addColorStop(1, 'hsla(320, 40%, 20%, 0)');
+          
+          ctx.fillStyle = nebulaGradient;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+        }
       }
       
       // 4. Dynamic weather effects
@@ -2453,6 +2571,25 @@ const SideScroller = ({ character, onBackToMenu }) => {
           );
           ctx.fill();
         }
+        ctx.restore();
+      });
+      
+      // 5.5. Volumetric atmospheric fog layers for depth
+      const fogLayers = [
+        { y: canvas.height * 0.6, opacity: 0.08, color: 'hsl(220, 30%, 60%)' },
+        { y: canvas.height * 0.7, opacity: 0.12, color: 'hsl(210, 25%, 55%)' },
+        { y: canvas.height * 0.8, opacity: 0.15, color: 'hsl(200, 20%, 50%)' }
+      ];
+      
+      fogLayers.forEach((layer, index) => {
+        ctx.save();
+        const waveOffset = Math.sin(time * 0.25 + index) * 15;
+        const fogGradient = ctx.createLinearGradient(0, layer.y, 0, layer.y + 40);
+        fogGradient.addColorStop(0, layer.color.replace(')', `, ${layer.opacity})`).replace('hsl', 'hsla'));
+        fogGradient.addColorStop(1, layer.color.replace(')', ', 0)').replace('hsl', 'hsla'));
+        
+        ctx.fillStyle = fogGradient;
+        ctx.fillRect(0, layer.y + waveOffset, canvas.width, 40);
         ctx.restore();
       });
       
@@ -2529,7 +2666,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
 
     // Realistic cityscape drawing function
     function drawCityscape(ctx, canvas, time, timeOfDay) {
-      const buildings = realisticBackground.current.buildings;
+      const buildings = backgroundBuildings.current;
       
       ctx.save();
       buildings.forEach(building => {

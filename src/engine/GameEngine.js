@@ -11,6 +11,11 @@ import { InputSystem } from './systems/InputSystem.js';
 import { AudioSystem } from './systems/AudioSystem.js';
 import { ParticleSystem } from './systems/ParticleSystem.js';
 import { CollisionSystem } from './systems/CollisionSystem.js';
+import { AISystem } from './systems/AISystem.js';
+import { StateSystem } from './systems/StateSystem.js';
+import { AnimationSystem } from './systems/AnimationSystem.js';
+import { LightingSystem } from './systems/LightingSystem.js';
+import { MemoryPoolSystem } from './systems/MemoryPoolSystem.js';
 import { EntityManager } from './core/EntityManager.js';
 import { SceneManager } from './core/SceneManager.js';
 import { AssetManager } from './core/AssetManager.js';
@@ -63,16 +68,21 @@ export class GameEngine {
   initializeSystems() {
     // Initialize all engine systems
     this.systems = {
-      physics: new PhysicsSystem(this),
-      render: new RenderSystem(this),
+      memory: new MemoryPoolSystem(this),
+      state: new StateSystem(this),
       input: new InputSystem(this),
-      audio: new AudioSystem(this),
+      ai: new AISystem(this),
+      physics: new PhysicsSystem(this),
+      collision: new CollisionSystem(this),
+      animation: new AnimationSystem(this),
       particles: new ParticleSystem(this),
-      collision: new CollisionSystem(this)
+      lighting: new LightingSystem(this),
+      audio: new AudioSystem(this),
+      render: new RenderSystem(this)
     };
 
-    // System initialization order matters
-    this.systemOrder = ['input', 'physics', 'collision', 'particles', 'audio', 'render'];
+    // System initialization order matters - memory and state first, render last
+    this.systemOrder = ['memory', 'state', 'input', 'ai', 'physics', 'collision', 'animation', 'particles', 'lighting', 'audio', 'render'];
 
     // Initialize each system
     this.systemOrder.forEach(systemName => {
