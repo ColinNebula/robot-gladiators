@@ -81,7 +81,7 @@ class SpriteAnimation {
     // Enhanced visual effects
     this.effects = {
       shadow: { enabled: true, offsetX: 2, offsetY: 2, blur: 4, alpha: 0.3 },
-      glow: { enabled: false, color: '#ffffff', blur: 10, alpha: 0.6 },
+      glow: { enabled: true, color: '#ffffff', blur: 15, alpha: 0.4 },
       shake: { enabled: false, intensity: 0, duration: 0, timer: 0 },
       bounce: { enabled: false, amplitude: 2, frequency: 0.1, offset: 0 },
       trail: { enabled: false, positions: [], maxLength: 5, fadeRate: 0.2 },
@@ -94,7 +94,7 @@ class SpriteAnimation {
       // New advanced effects
       afterimage: { enabled: false, positions: [], maxLength: 3, opacity: 0.3 },
       screenFlash: { enabled: false, color: '#ffffff', intensity: 0, duration: 0 },
-      aura: { enabled: false, color: '#00ffff', radius: 50, pulse: true, intensity: 0.5 },
+      aura: { enabled: true, color: '#00ffff', radius: 60, pulse: true, intensity: 0.3 },
       distortion: { enabled: false, amount: 0, type: 'wave' }
     };
     
@@ -1181,9 +1181,190 @@ const SideScroller = ({ character, onBackToMenu }) => {
   const backgroundBuildings = useRef([]);
   const backgroundLights = useRef([]);
   const lightingSystem = useRef({ lightning: { active: false, intensity: 0 } });
+  const foregroundElements = useRef([]);
   const weatherEffects = useRef({ rain: [], fog: [], wind: 0 });
   const atmosphericLayers = useRef({ near: [], far: [], particles: [] });
   
+  // Particle creation function - moved to component level for accessibility
+  const createParticles = React.useCallback((x, y, color, count = 4, type = 'normal') => {
+    // Only log if particles exceed reasonable limit
+    if (particlesRef.current.length > 100) {
+      console.warn(`⚠️ High particle count: ${particlesRef.current.length} - Creating ${count} more ${type} particles`);
+    }
+    
+    // Limit total particle count to prevent performance issues
+    if (particlesRef.current.length > 200) {
+      console.warn('🚫 Particle limit reached - skipping creation');
+      return;
+    }
+    
+    const newParticles = [];
+    
+    for (let i = 0; i < count; i++) {
+      let particle;
+      
+      if (type === 'explosion') {
+        // Explosive burst particles - radial spread
+        const angle = (i / count) * Math.PI * 2;
+        const speed = 2 + Math.random() * 4;
+        const life = 30 + Math.random() * 20; // Optimized shorter life
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 15,
+          y: y + (Math.random() - 0.5) * 15,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: color || '#ff4444',
+          size: 4 + Math.random() * 4,
+          type: 'explosion'
+        };
+      } else if (type === 'hit') {
+        // Impact particles - directional spray
+        const baseAngle = Math.random() * Math.PI * 2;
+        const spread = Math.PI / 3; // 60 degree spread
+        const angle = baseAngle + (Math.random() - 0.5) * spread;
+        const speed = 1.5 + Math.random() * 3;
+        const life = 20 + Math.random() * 15;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 8,
+          y: y + (Math.random() - 0.5) * 8,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: color || '#ffaa00',
+          size: 2 + Math.random() * 3,
+          type: 'hit'
+        };
+      } else if (type === 'smoke') {
+        // Smoke particles - rising effect
+        const angle = (Math.random() - 0.5) * Math.PI / 4; // 45 degree spread
+        const speed = 0.5 + Math.random() * 1.5;
+        const life = 40 + Math.random() * 20;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 12,
+          y: y + (Math.random() - 0.5) * 12,
+          vx: Math.cos(angle) * speed * 0.5,
+          vy: -Math.abs(Math.sin(angle) * speed), // Always rise
+          life: life,
+          maxLife: life,
+          color: color || '#666666',
+          size: 3 + Math.random() * 4,
+          type: 'smoke'
+        };
+      } else if (type === 'fire') {
+        // Fire particles - rising flames with flicker
+        const angle = (Math.random() - 0.5) * Math.PI / 6; // 30 degree spread
+        const speed = 1 + Math.random() * 2.5;
+        const life = 35 + Math.random() * 25;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 8,
+          y: y + (Math.random() - 0.5) * 6,
+          vx: Math.cos(angle) * speed * 0.3,
+          vy: -Math.abs(Math.sin(angle) * speed), // Always rise
+          life: life,
+          maxLife: life,
+          color: ['#ff4444', '#ff6600', '#ffaa00', '#ff8800', '#ff2200'][Math.floor(Math.random() * 5)],
+          size: 2 + Math.random() * 3,
+          type: 'fire',
+          flicker: true,
+          heat: 1.0,
+          gravity: -0.02 // Slight upward pull
+        };
+      } else if (type === 'ice') {
+        // Ice particles - crystalline shards with shimmer
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.8 + Math.random() * 2;
+        const life = 45 + Math.random() * 30;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 10,
+          y: y + (Math.random() - 0.5) * 8,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: ['#88ddff', '#aaeeff', '#ccf5ff', '#ffffff', '#77ccee'][Math.floor(Math.random() * 5)],
+          size: 1 + Math.random() * 2.5,
+          type: 'ice',
+          shimmer: true,
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.1,
+          gravity: 0.015 // Slight downward pull
+        };
+      } else if (type === 'frost') {
+        // Frost particles - slow floating crystals
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.3 + Math.random() * 1;
+        const life = 60 + Math.random() * 40;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 15,
+          y: y + (Math.random() - 0.5) * 12,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed * 0.5,
+          life: life,
+          maxLife: life,
+          color: ['#e6f3ff', '#ffffff', '#cce7ff', '#b3d9ff'][Math.floor(Math.random() * 4)],
+          size: 0.5 + Math.random() * 1.5,
+          type: 'frost',
+          drift: true,
+          twinkle: Math.random() > 0.5,
+          gravity: -0.005 // Very slight upward drift
+        };
+      } else if (type === 'ember') {
+        // Ember particles - glowing sparks
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 3;
+        const life = 30 + Math.random() * 20;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 6,
+          y: y + (Math.random() - 0.5) * 6,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: ['#ff6600', '#ff4400', '#ff8800', '#ffaa00'][Math.floor(Math.random() * 4)],
+          size: 1 + Math.random() * 2,
+          type: 'ember',
+          glow: true,
+          sparkle: true,
+          gravity: 0.01
+        };
+      } else {
+        // Default particles - standard behavior
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.5 + Math.random() * 2;
+        const life = 25 + Math.random() * 15;
+        
+        particle = {
+          x: x + (Math.random() - 0.5) * 10,
+          y: y + (Math.random() - 0.5) * 10,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: life,
+          maxLife: life,
+          color: color || '#ffffff',
+          size: 2 + Math.random() * 2,
+          type: 'normal'
+        };
+      }
+      
+      newParticles.push(particle);
+    }
+    
+    // Add new particles to the ref array
+    particlesRef.current = [...particlesRef.current, ...newParticles];
+    
+    console.log(`✨ Created ${newParticles.length} ${type} particles at (${x}, ${y}) - Total: ${particlesRef.current.length}`);
+  }, []);
+
   // Enable sprite debugging via console: window.DEBUG_SPRITES = true
   useEffect(() => {
     window.DEBUG_SPRITES = true; // Temporarily enabled for debugging sprites
@@ -1198,6 +1379,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
     // Initialize realistic background systems
     initializeWeatherEffects();
     initializeLightingSystem();
+    initializeForegroundElements();
     
     // Create enhanced starfield
     backgroundStars.current = [];
@@ -1348,7 +1530,13 @@ const SideScroller = ({ character, onBackToMenu }) => {
   
   // Initialize dynamic lighting system
   function initializeLightingSystem() {
-    backgroundLights.current = [];
+    backgroundLights.current = {
+      lights: [],
+      lightning: {
+        active: false,
+        intensity: 0
+      }
+    };
     
     // Initialize lighting system
     lightingSystem.current = {
@@ -1360,7 +1548,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
     
     // Street lights and city glow
     for (let i = 0; i < 15; i++) {
-      backgroundLights.current.push({
+      backgroundLights.current.lights.push({
         x: Math.random() * 1200,
         y: Math.random() * 100 + 400,
         radius: Math.random() * 50 + 30,
@@ -1372,6 +1560,55 @@ const SideScroller = ({ character, onBackToMenu }) => {
     }
   }
   
+  // Initialize realistic foreground elements
+  function initializeForegroundElements() {
+    foregroundElements.current = [];
+    
+    // Street details and urban elements
+    const streetElements = [
+      // Manholes
+      { type: 'manhole', x: 200, y: GROUND_Y + 10, width: 40, height: 8, color: '#333' },
+      { type: 'manhole', x: 600, y: GROUND_Y + 10, width: 40, height: 8, color: '#333' },
+      { type: 'manhole', x: 1000, y: GROUND_Y + 10, width: 40, height: 8, color: '#333' },
+      
+      // Street pipes and vents
+      { type: 'pipe', x: 100, y: GROUND_Y - 20, width: 15, height: 30, color: '#555', steam: true },
+      { type: 'pipe', x: 450, y: GROUND_Y - 35, width: 20, height: 45, color: '#444', steam: true },
+      { type: 'pipe', x: 800, y: GROUND_Y - 25, width: 18, height: 35, color: '#666', steam: false },
+      
+      // Trash and debris
+      { type: 'trash', x: 320, y: GROUND_Y - 8, width: 12, height: 8, color: '#8B4513' },
+      { type: 'trash', x: 720, y: GROUND_Y - 6, width: 8, height: 6, color: '#654321' },
+      
+      // Street lights (foreground)
+      { type: 'streetlight', x: 50, y: GROUND_Y - 120, width: 8, height: 120, color: '#333', light: true },
+      { type: 'streetlight', x: 400, y: GROUND_Y - 130, width: 8, height: 130, color: '#333', light: true },
+      { type: 'streetlight', x: 750, y: GROUND_Y - 125, width: 8, height: 125, color: '#333', light: true },
+      
+      // Industrial elements
+      { type: 'vent', x: 280, y: GROUND_Y - 15, width: 25, height: 15, color: '#444', glow: true },
+      { type: 'vent', x: 680, y: GROUND_Y - 18, width: 30, height: 18, color: '#555', glow: true },
+      
+      // Puddles (reflective)
+      { type: 'puddle', x: 150, y: GROUND_Y + 2, width: 60, height: 4, color: '#001122', reflective: true },
+      { type: 'puddle', x: 520, y: GROUND_Y + 2, width: 80, height: 3, color: '#001133', reflective: true },
+      
+      // Atmospheric particles (floating debris)
+      ...Array.from({ length: 12 }, (_, i) => ({
+        type: 'floating_debris',
+        x: Math.random() * 1200,
+        y: Math.random() * 200 + 100,
+        size: Math.random() * 3 + 1,
+        speedX: Math.random() * 0.5 - 0.25,
+        speedY: Math.random() * 0.3 - 0.15,
+        opacity: Math.random() * 0.6 + 0.2,
+        color: ['#666', '#777', '#555', '#888'][Math.floor(Math.random() * 4)]
+      }))
+    ];
+    
+    foregroundElements.current = streetElements;
+  }
+
   const playerRef = useRef({
     x: 150, // Moved further from edge for wider screen
     y: GROUND_Y,
@@ -1418,14 +1655,34 @@ const SideScroller = ({ character, onBackToMenu }) => {
   const [combo, setCombo] = useState({ player: 0, enemy: 0, timer: 0 });
   const [specialMeter, setSpecialMeter] = useState({ player: 0, enemy: 0 });
   const [powerUps, setPowerUps] = useState([]);
-  const [gameTime, setGameTime] = useState(0);
+  const [gameTime, setGameTime] = useState(3600); // 60 seconds at 60 FPS
+  const [roundNumber, setRoundNumber] = useState(1);
+  const [roundActive, setRoundActive] = useState(false); // Start with round inactive for announcement
+  const [matchScore, setMatchScore] = useState({ player: 0, enemy: 0 }); // Rounds won
+  const [matchComplete, setMatchComplete] = useState(false);
+  const [lastRoundWinner, setLastRoundWinner] = useState(null);
   const [connectedGamepad, setConnectedGamepad] = useState({ type: null, name: null });
+  
+  // Round announcement system
+  const [roundAnnouncement, setRoundAnnouncement] = useState({
+    active: true, // Start with announcement for round 1
+    phase: 'announcing', // 'announcing', 'fight', 'none'
+    timer: 180, // 3 seconds at 60 FPS for announcement
+    roundToShow: 1
+  });
 
   // Game state refs for tracking
   const gameStateRef = useRef({
     frameCount: 0,
-    particleCreationCount: 0
+    particleCreationCount: 0,
+    fps: 60,
+    frameTime: 16.67,
+    performanceMode: 'auto'
   });
+
+  // Frame timing variables for optimization
+  let lastFrameTime = 0;
+  let frameCount = 0;
 
   // Enhanced Combat System State
   const [activeKeys, setActiveKeys] = useState(new Set());
@@ -1522,6 +1779,43 @@ const SideScroller = ({ character, onBackToMenu }) => {
     });
     
     console.log('Enhanced sprite animations initialized');
+    
+    // Initialize game state to ensure UI elements appear immediately
+    console.log('🎬 Initializing game UI elements...');
+    
+    // Create some initial atmospheric particles for visual feedback
+    setTimeout(() => {
+      if (particlesRef.current.length === 0) {
+        console.log('🌟 Creating initial atmospheric particles...');
+        createParticles(200, 300, '#4facfe', 3, 'sparkle');
+        createParticles(800, 250, '#ff6600', 2, 'ember');
+        createParticles(600, 200, '#88ddff', 4, 'frost');
+      }
+    }, 100);
+    
+  }, [createParticles]);
+
+  // Force initial state visibility
+  useEffect(() => {
+    console.log('🎯 Ensuring round announcement visibility...');
+    
+    // Make sure round announcement is properly initialized and visible
+    setTimeout(() => {
+      setRoundAnnouncement(prev => {
+        console.log('Round announcement current state:', prev);
+        if (!prev.active) {
+          console.log('🔄 Reactivating round announcement for visibility');
+          return {
+            ...prev,
+            active: true,
+            phase: 'announcing',
+            timer: 180,
+            roundToShow: 1
+          };
+        }
+        return prev;
+      });
+    }, 50);
   }, []);
 
   // Main game loop useEffect
@@ -1541,10 +1835,19 @@ const SideScroller = ({ character, onBackToMenu }) => {
 
     function draw() {
       try {
-        // Drawing frame silently for performance
+        // Enhanced rendering with performance optimizations
         
-        // Clear canvas first
+        // Debug logging for initial frames
+        if (gameStateRef.current.frameCount < 5) {
+          console.log(`🎨 Draw called - Frame ${gameStateRef.current.frameCount}, Round announcement active: ${roundAnnouncement.active}, Particles: ${particlesRef.current.length}`);
+        }
+        
+        // Optimized canvas clearing
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Set optimal rendering settings for performance
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'medium'; // Balance between quality and performance
         
         // Draw atmospheric background elements
         drawAtmosphericBackground(ctx, canvas);
@@ -1552,6 +1855,22 @@ const SideScroller = ({ character, onBackToMenu }) => {
         // Draw simple ground for now
         ctx.fillStyle = '#333';
         ctx.fillRect(0, GROUND_Y, canvas.width, 40);
+        
+        // Draw realistic foreground elements
+        const time = Date.now() * 0.001;
+        drawRealisticForeground(ctx, canvas, time);
+        
+        // Draw basic player rectangle if sprites not loaded
+        if (!spritesLoaded.player) {
+          ctx.fillStyle = '#00ff00';
+          ctx.fillRect(playerRef.current.x, playerRef.current.y, CHARACTER_WIDTH, CHARACTER_HEIGHT);
+        }
+        
+        // Draw basic enemy rectangle if sprites not loaded
+        if (!spritesLoaded.enemy) {
+          ctx.fillStyle = '#ff0000';
+          ctx.fillRect(enemyRef.current.x, enemyRef.current.y, CHARACTER_WIDTH, CHARACTER_HEIGHT);
+        }
         
         console.log('✅ Frame drawn successfully');
         
@@ -1579,10 +1898,10 @@ const SideScroller = ({ character, onBackToMenu }) => {
       
       // Main ground platform
       const groundGradient = ctx.createLinearGradient(0, GROUND_Y, 0, GROUND_Y + 40);
-      groundGradient.addColorStop(0, '#4a4a6a');
-      groundGradient.addColorStop(0.3, '#333355');
-      groundGradient.addColorStop(0.7, '#2a2a3a');
-      groundGradient.addColorStop(1, '#1a1a2a');
+      groundGradient.addColorStop(0, '#6a6a8a');
+      groundGradient.addColorStop(0.3, '#555575');
+      groundGradient.addColorStop(0.7, '#4a4a5a');
+      groundGradient.addColorStop(1, '#3a3a4a');
       ctx.fillStyle = groundGradient;
       ctx.fillRect(0, GROUND_Y, canvas.width, 40);
       
@@ -2027,25 +2346,208 @@ const SideScroller = ({ character, onBackToMenu }) => {
       const centerX = canvas.width / 2;
       const topY = 30;
       
-      // Game timer
-      const gameTimeSeconds = Math.floor(gameTime / 60); // Assuming 60 FPS
-      const minutes = Math.floor(gameTimeSeconds / 60);
-      const seconds = gameTimeSeconds % 60;
+      // Game timer (countdown)
+      const remainingSeconds = Math.max(0, Math.ceil(gameTime / 60)); // Convert frames to seconds
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
       const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
       
-      ctx.font = 'bold 20px Arial';
-      ctx.fillStyle = '#fff';
+      // Timer color changes based on remaining time
+      let timerColor = '#fff';
+      if (remainingSeconds <= 10) {
+        timerColor = '#ff4444'; // Red when 10 seconds or less
+      } else if (remainingSeconds <= 30) {
+        timerColor = '#ffaa00'; // Orange when 30 seconds or less
+      }
+      
+      // Enhanced timer with much larger size
+      ctx.font = 'bold 56px Orbitron, Arial';
+      ctx.fillStyle = timerColor;
       ctx.textAlign = 'center';
       ctx.shadowColor = '#000';
-      ctx.shadowBlur = 3;
-      ctx.fillText(timeString, centerX, topY);
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 4;
+      
+      // Add outline stroke for better visibility
+      ctx.strokeStyle = '#000';
+      ctx.strokeText(timeString, centerX, topY + 15);
+      
+      // Add pulsing effect when time is low
+      if (remainingSeconds <= 10 && remainingSeconds > 0) {
+        const pulse = 1 + Math.sin(Date.now() * 0.015) * 0.2;
+        ctx.save();
+        ctx.scale(pulse, pulse);
+        ctx.fillText(timeString, centerX / pulse, (topY + 15) / pulse);
+        ctx.restore();
+        
+        // Add intense glowing effect when critical
+        if (remainingSeconds <= 5) {
+          ctx.shadowColor = timerColor;
+          ctx.shadowBlur = 25;
+          ctx.fillText(timeString, centerX, topY + 15);
+        }
+      } else {
+        ctx.fillText(timeString, centerX, topY + 15);
+      }
+      
       ctx.shadowBlur = 0;
       
-      // VS indicator
-      ctx.font = 'bold 14px Arial';
+      // Round Announcement Display - appears before each round
+      if (roundAnnouncement.active) {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        // Create dramatic announcement overlay
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (roundAnnouncement.phase === 'announcing') {
+          // Animated entrance for "Round X"
+          const progress = (180 - roundAnnouncement.timer) / 60; // First second for entrance
+          const scale = Math.min(1, progress * 2);
+          const alpha = Math.min(1, progress * 3);
+          
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.translate(centerX, centerY - 60);
+          ctx.scale(scale, scale);
+          
+          // Glowing round number
+          ctx.font = 'bold 120px Arial';
+          ctx.fillStyle = '#fff';
+          ctx.shadowColor = '#4facfe';
+          ctx.shadowBlur = 30;
+          ctx.textAlign = 'center';
+          ctx.fillText(`ROUND ${roundAnnouncement.roundToShow}`, 0, 0);
+          
+          ctx.restore();
+          
+          // "FIGHT!" appears after 1 second
+          if (roundAnnouncement.timer <= 120) {
+            const fightProgress = (120 - roundAnnouncement.timer) / 60;
+            const fightScale = Math.min(1, fightProgress * 3);
+            const flash = Math.sin(Date.now() * 0.02) > 0;
+            
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, fightProgress * 2);
+            ctx.translate(centerX, centerY + 80);
+            ctx.scale(fightScale, fightScale);
+            
+            ctx.font = 'bold 80px Arial';
+            ctx.fillStyle = flash ? '#ff4757' : '#ffd700';
+            ctx.shadowColor = flash ? '#ff4757' : '#ffd700';
+            ctx.shadowBlur = 40;
+            ctx.textAlign = 'center';
+            ctx.fillText('FIGHT!', 0, 0);
+            
+            ctx.restore();
+          }
+        }
+        
+        ctx.restore();
+      }
+      
+      // Match info: Round and Score display (always 3 rounds)
+      ctx.font = 'bold 22px Arial';
+      if (matchComplete) {
+        // Show final match result after all 3 rounds
+        const flash = Math.sin(Date.now() * 0.008) > 0;
+        ctx.fillStyle = flash ? '#ffd700' : '#ffaa00';
+        
+        if (matchScore.player > matchScore.enemy) {
+          const matchWinner = playerRef.current.name || 'Player';
+          ctx.fillText(`🏆 ${matchWinner} WINS THE MATCH!`, centerX, topY + 80);
+        } else if (matchScore.enemy > matchScore.player) {
+          const matchWinner = enemyRef.current.name || 'Enemy';
+          ctx.fillText(`🏆 ${matchWinner} WINS THE MATCH!`, centerX, topY + 80);
+        } else {
+          ctx.fillText(`🤝 MATCH DRAW!`, centerX, topY + 80);
+        }
+        
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(`Final Score: ${matchScore.player} - ${matchScore.enemy} (Best of 3)`, centerX, topY + 105);
+      } else if (roundActive) {
+        ctx.fillStyle = '#4facfe';
+        ctx.fillText(`Round ${roundNumber} (Best of 3)`, centerX, topY + 80);
+        
+        // Show current standings if past round 1
+        if (roundNumber > 1) {
+          ctx.font = 'bold 14px Arial';
+          ctx.fillStyle = '#aaa';
+          ctx.fillText(`Current: ${matchScore.player} - ${matchScore.enemy} (Need 2 to win)`, centerX, topY + 100);
+        }
+      } else {
+        // Flashing text when round is over
+        const flash = Math.sin(Date.now() * 0.01) > 0;
+        ctx.fillStyle = flash ? '#ff6600' : '#ffaa00';
+        ctx.fillText(`Round ${roundNumber} - ENDED`, centerX, topY + 80);
+        
+        if (lastRoundWinner && lastRoundWinner !== 'Draw') {
+          ctx.font = 'bold 16px Arial';
+          ctx.fillStyle = '#4facfe';
+          ctx.fillText(`Winner: ${lastRoundWinner}`, centerX, topY + 105);
+        }
+        
+        // Always show next round info (unless match complete)
+        if (!matchComplete && matchScore.player < 2 && matchScore.enemy < 2) {
+          ctx.font = 'bold 14px Arial';
+          ctx.fillStyle = '#fff';
+          ctx.fillText(`Round ${roundNumber + 1} starting soon...`, centerX, topY + 125);
+        } else if (!matchComplete) {
+          ctx.font = 'bold 14px Arial';
+          ctx.fillStyle = '#ffd700';
+          ctx.fillText('Match complete!', centerX, topY + 125);
+        }
+      }
+      
+      // Enhanced score display with round indicators
+      ctx.font = 'bold 20px Arial';
+      ctx.fillStyle = '#fff';
+      const playerName = (playerRef.current.name || 'Player').substring(0, 10);
+      const enemyName = (enemyRef.current.name || 'Enemy').substring(0, 10);
+      
+      // Left side - Player score
+      ctx.textAlign = 'left';
+      ctx.fillText(`${playerName}`, 25, topY + 80);
+      ctx.font = 'bold 24px Arial';
+      ctx.fillStyle = matchScore.player > matchScore.enemy ? '#4facfe' : '#fff';
+      ctx.fillText(`${matchScore.player}`, 25, topY + 105);
+      
+      // Right side - Enemy score  
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 20px Arial';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(`${enemyName}`, canvas.width - 25, topY + 80);
+      ctx.font = 'bold 24px Arial';
+      ctx.fillStyle = matchScore.enemy > matchScore.player ? '#4facfe' : '#fff';
+      ctx.fillText(`${matchScore.enemy}`, canvas.width - 25, topY + 105);
+      
+      // Draw round indicators (dots)
+      ctx.fillStyle = '#666';
+      for (let i = 1; i <= 3; i++) {
+        const dotX = centerX - 30 + (i - 1) * 30;
+        ctx.beginPath();
+        ctx.arc(dotX, topY + 110, 6, 0, Math.PI * 2);
+        if (i <= roundNumber && !matchComplete) {
+          ctx.fillStyle = i === roundNumber ? '#4facfe' : '#888';
+        } else if (matchComplete) {
+          ctx.fillStyle = '#ffd700';
+        } else {
+          ctx.fillStyle = '#444';
+        }
+        ctx.fill();
+      }
+      
+      ctx.textAlign = 'center';
+      
+      // VS indicator (positioned below the larger timer)
+      ctx.font = 'bold 16px Arial';
       ctx.fillStyle = '#ffd700';
       ctx.textAlign = 'center';
-      ctx.fillText('VS', centerX, topY + 25);
+      const vsY = roundActive ? topY + 100 : topY + 120;
+      ctx.fillText('VS', centerX, vsY);
       
       // Draw collision boxes (for debugging - make them less prominent)
       if (true) { // Enable collision boxes to see the new smaller size
@@ -2151,6 +2653,131 @@ const SideScroller = ({ character, onBackToMenu }) => {
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 ctx.shadowBlur = 0;
+                
+              } else if (particle.type === 'fire') {
+                // Fire particles with dynamic flames
+                ctx.save();
+                ctx.translate(particle.x, particle.y);
+                
+                // Parse color from particle
+                const fireColors = ['#ff4444', '#ff6600', '#ffaa00', '#ff8800', '#ff2200'];
+                const baseColor = particle.color || '#ff6600';
+                
+                // Outer flame glow
+                ctx.shadowColor = '#ff4400';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = baseColor.replace('rgb', 'rgba').replace(')', ', 0.8)');
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size * 1.2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner flame core
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#ffaa00';
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Hot center
+                ctx.shadowBlur = 5;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+                
+              } else if (particle.type === 'ember') {
+                // Ember particles with glow and sparkle
+                ctx.save();
+                ctx.translate(particle.x, particle.y);
+                
+                const emberAlpha = alpha * 0.9;
+                
+                // Ember glow
+                ctx.shadowColor = '#ff6600';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = `rgba(255, 102, 0, ${emberAlpha})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Sparkle effect
+                if (particle.sparkle && Math.random() > 0.7) {
+                  ctx.shadowBlur = 20;
+                  ctx.fillStyle = `rgba(255, 255, 255, ${emberAlpha})`;
+                  ctx.beginPath();
+                  ctx.arc(0, 0, particle.size * 0.5, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+                
+              } else if (particle.type === 'ice') {
+                // Ice particles with crystalline effects
+                ctx.save();
+                ctx.translate(particle.x, particle.y);
+                ctx.rotate(particle.rotation || 0);
+                
+                const iceAlpha = alpha * 0.8;
+                
+                // Ice crystal glow
+                ctx.shadowColor = '#88ddff';
+                ctx.shadowBlur = 12;
+                ctx.fillStyle = `rgba(136, 221, 255, ${iceAlpha})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Crystalline structure
+                ctx.strokeStyle = `rgba(255, 255, 255, ${iceAlpha})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-particle.size, 0);
+                ctx.lineTo(particle.size, 0);
+                ctx.moveTo(0, -particle.size);
+                ctx.lineTo(0, particle.size);
+                ctx.stroke();
+                
+                // Shimmer effect
+                if (particle.shimmer && Math.random() > 0.6) {
+                  ctx.shadowBlur = 15;
+                  ctx.fillStyle = `rgba(255, 255, 255, ${iceAlpha * 0.7})`;
+                  ctx.beginPath();
+                  ctx.arc(0, 0, particle.size * 0.4, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
+                
+              } else if (particle.type === 'frost') {
+                // Frost particles with subtle effects
+                ctx.save();
+                
+                const frostAlpha = alpha * 0.6;
+                
+                // Soft frost glow
+                ctx.shadowColor = '#e6f3ff';
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = `rgba(230, 243, 255, ${frostAlpha})`;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Twinkle effect
+                if (particle.twinkle && Math.random() > 0.8) {
+                  ctx.shadowBlur = 12;
+                  ctx.fillStyle = `rgba(255, 255, 255, ${frostAlpha})`;
+                  ctx.beginPath();
+                  ctx.arc(particle.x, particle.y, particle.size * 0.3, 0, Math.PI * 2);
+                  ctx.fill();
+                }
+                
+                ctx.shadowBlur = 0;
+                ctx.restore();
                 
               } else {
                 // Normal particles with enhanced visibility
@@ -2332,12 +2959,18 @@ const SideScroller = ({ character, onBackToMenu }) => {
       ctx.fillText(`Active Projectiles: ${projectiles.length}`, canvas.width - 290, 70);
       ctx.fillText(`Frame: ${gameStateRef.current.frameCount || 0}`, canvas.width - 290, 90);
       
+      // Performance information
+      ctx.fillStyle = '#00ffff';
+      ctx.font = '12px Arial';
+      ctx.fillText(`FPS: ${gameStateRef.current.fps || 60}`, canvas.width - 290, 110);
+      ctx.fillText(`Frame Time: ${(gameStateRef.current.frameTime || 16.67).toFixed(1)}ms`, canvas.width - 290, 125);
+      
       // Knockback information
       ctx.fillStyle = '#ff88ff';
       ctx.font = '12px Arial';
-      ctx.fillText(`KNOCKBACK STATUS:`, canvas.width - 290, 110);
-      ctx.fillText(`Player velocity: ${playerRef.current.vx.toFixed(1)}`, canvas.width - 290, 125);
-      ctx.fillText(`Enemy velocity: ${enemyRef.current.vx.toFixed(1)}`, canvas.width - 290, 140);
+      ctx.fillText(`KNOCKBACK STATUS:`, canvas.width - 290, 145);
+      ctx.fillText(`Player velocity: ${playerRef.current.vx.toFixed(1)}`, canvas.width - 290, 160);
+      ctx.fillText(`Enemy velocity: ${enemyRef.current.vx.toFixed(1)}`, canvas.width - 290, 175);
       
       // Projectile type controls
       ctx.fillStyle = '#88ffff';
@@ -2766,7 +3399,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
     
     // Atmospheric lighting effects
     function drawAtmosphericLighting(ctx, canvas, time, timeOfDay) {
-      const lighting = lightingSystem.current;
+      const lighting = backgroundLights.current;
       
       // City glow effect
       ctx.save();
@@ -2804,263 +3437,160 @@ const SideScroller = ({ character, onBackToMenu }) => {
       ctx.restore();
     }
 
-    // Atmospheric background functions would go here if needed
-    
-    function createParticles(x, y, color, count = 4, type = 'normal') {
+    // Realistic foreground drawing function
+    function drawRealisticForeground(ctx, canvas, time) {
+      const elements = foregroundElements.current;
       
-      buildingHeights.forEach((height, index) => {
-        const x = index * buildingWidth;
-        const y = canvas.height * 0.6 - height;
+      elements.forEach(element => {
+        ctx.save();
         
-        // Building gradient
-        const buildingGradient = ctx.createLinearGradient(x, y, x, y + height);
-        buildingGradient.addColorStop(0, '#2a2a4a');
-        buildingGradient.addColorStop(1, '#1a1a2e');
-        ctx.fillStyle = buildingGradient;
-        ctx.fillRect(x, y, buildingWidth - 2, height);
-        
-        // Building windows (some lit up)
-        const windowRows = Math.floor(height / 12);
-        const windowCols = Math.floor(buildingWidth / 8);
-        
-        for (let row = 0; row < windowRows; row++) {
-          for (let col = 0; col < windowCols; col++) {
-            if (Math.random() > 0.7) { // 30% chance of lit window
-              const windowX = x + col * 8 + 2;
-              const windowY = y + row * 12 + 3;
-              const windowColor = Math.random() > 0.8 ? '#4facfe' : '#ffd700';
+        switch (element.type) {
+          case 'manhole':
+            // Draw manhole cover
+            ctx.fillStyle = element.color;
+            ctx.fillRect(element.x, element.y, element.width, element.height);
+            
+            // Manhole details
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(element.x + 2, element.y + 1, element.width - 4, element.height - 2);
+            
+            // Center dot pattern
+            ctx.fillStyle = '#222';
+            for (let i = 0; i < 3; i++) {
+              for (let j = 0; j < 8; j++) {
+                ctx.fillRect(element.x + 6 + j * 4, element.y + 2 + i * 2, 1, 1);
+              }
+            }
+            break;
+            
+          case 'pipe':
+            // Draw industrial pipe
+            ctx.fillStyle = element.color;
+            ctx.fillRect(element.x, element.y, element.width, element.height);
+            
+            // Pipe highlights and shadows
+            ctx.fillStyle = '#888';
+            ctx.fillRect(element.x, element.y, 2, element.height);
+            ctx.fillStyle = '#222';
+            ctx.fillRect(element.x + element.width - 2, element.y, 2, element.height);
+            
+            // Steam effect
+            if (element.steam) {
+              const steamOpacity = 0.3 + Math.sin(time * 3 + element.x * 0.01) * 0.2;
+              ctx.globalAlpha = steamOpacity;
+              ctx.fillStyle = '#ffffff';
               
-              ctx.fillStyle = windowColor;
-              ctx.globalAlpha = 0.6 + Math.sin(time * 2 + index + row + col) * 0.3;
-              ctx.fillRect(windowX, windowY, 4, 6);
+              for (let i = 0; i < 3; i++) {
+                const steamY = element.y - 10 - i * 8 + Math.sin(time * 2 + i) * 3;
+                const steamSize = 4 + i * 2;
+                ctx.fillRect(element.x + element.width/2 - steamSize/2, steamY, steamSize, 2);
+              }
             }
-          }
-        }
-        
-        // Building antenna/spires
-        if (Math.random() > 0.5) {
-          ctx.globalAlpha = 0.5;
-          ctx.strokeStyle = '#4facfe';
-          ctx.lineWidth = 2;
-          ctx.shadowColor = '#4facfe';
-          ctx.shadowBlur = 5;
-          
-          const antennaX = x + buildingWidth / 2;
-          const antennaHeight = height * 0.3;
-          
-          ctx.beginPath();
-          ctx.moveTo(antennaX, y);
-          ctx.lineTo(antennaX, y - antennaHeight);
-          ctx.stroke();
-          
-          // Blinking antenna light
-          if (Math.sin(time * 3 + index) > 0.5) {
-            ctx.fillStyle = '#ff4757';
-            ctx.shadowColor = '#ff4757';
-            ctx.shadowBlur = 8;
-            ctx.beginPath();
-            ctx.arc(antennaX, y - antennaHeight, 2, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-      });
-      
-      ctx.restore();
-      
-      // 9. Flying vehicles/ships in the distance
-      const vehicleTime = time * 0.3;
-      for (let i = 0; i < 2; i++) {
-        const vehicleX = (vehicleTime * 50 + i * 400) % (canvas.width + 100) - 50;
-        const vehicleY = canvas.height * 0.3 + Math.sin(vehicleTime + i * 3) * 20;
-        
-        if (vehicleX > -50 && vehicleX < canvas.width + 50) {
-          ctx.save();
-          ctx.globalAlpha = 0.4;
-          
-          // Vehicle body
-          ctx.fillStyle = '#444';
-          ctx.fillRect(vehicleX, vehicleY, 20, 6);
-          
-          // Vehicle lights
-          ctx.fillStyle = '#4facfe';
-          ctx.globalAlpha = 0.8;
-          ctx.shadowColor = '#4facfe';
-          ctx.shadowBlur = 4;
-          ctx.fillRect(vehicleX + 18, vehicleY + 1, 3, 4);
-          
-          // Trail effect
-          ctx.globalAlpha = 0.2;
-          for (let j = 1; j <= 5; j++) {
-            ctx.fillStyle = `rgba(79, 172, 254, ${0.2 / j})`;
-            ctx.fillRect(vehicleX - j * 3, vehicleY + 2, 2, 2);
-          }
-          
-          ctx.restore();
-        }
-      }
-      
-      // 10. Atmospheric weather particles (space dust)
-      for (let i = 0; i < 30; i++) {
-        const dustX = (time * 20 + i * 40) % (canvas.width + 20) - 10;
-        const dustY = (i * 47) % canvas.height;
-        const dustSize = 0.5 + (i % 3) * 0.5;
-        
-        ctx.save();
-        ctx.globalAlpha = 0.3 + Math.sin(time * 2 + i) * 0.2;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = dustSize * 2;
-        ctx.beginPath();
-        ctx.arc(dustX, dustY, dustSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-      
-      // 11. Holographic advertisements floating in space
-      const hologramTime = time * 0.5;
-      for (let i = 0; i < 3; i++) {
-        const holoX = canvas.width * 0.2 + i * canvas.width * 0.3;
-        const holoY = canvas.height * 0.25 + Math.sin(hologramTime + i * 2) * 15;
-        const holoScale = 0.8 + Math.sin(hologramTime * 1.5 + i) * 0.2;
-        
-        ctx.save();
-        ctx.translate(holoX, holoY);
-        ctx.scale(holoScale, holoScale);
-        ctx.globalAlpha = 0.6 + Math.sin(hologramTime * 2 + i) * 0.3;
-        
-        // Hologram border
-        ctx.strokeStyle = '#00ff88';
-        ctx.lineWidth = 2;
-        ctx.shadowColor = '#00ff88';
-        ctx.shadowBlur = 8;
-        ctx.strokeRect(-30, -20, 60, 40);
-        
-        // Hologram content (simulated text/logos)
-        ctx.fillStyle = '#00ff88';
-        ctx.globalAlpha = 0.4;
-        for (let line = 0; line < 3; line++) {
-          const lineY = -10 + line * 8;
-          const lineWidth = 40 - line * 5;
-          ctx.fillRect(-lineWidth/2, lineY, lineWidth, 2);
-        }
-        
-        // Hologram flicker effect
-        if (Math.sin(time * 8 + i * 3) > 0.8) {
-          ctx.globalAlpha = 0.9;
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(-30, -20, 60, 40);
-        }
-        
-        ctx.restore();
-      }
-      
-      // 12. Data streams and energy conduits
-      const streamTime = time * 1.5;
-      for (let i = 0; i < 4; i++) {
-        const streamX = canvas.width * (0.1 + i * 0.25);
-        const streamHeight = canvas.height * 0.7;
-        
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        
-        // Main conduit
-        ctx.strokeStyle = '#4facfe';
-        ctx.lineWidth = 3;
-        ctx.shadowColor = '#4facfe';
-        ctx.shadowBlur = 6;
-        
-        ctx.beginPath();
-        ctx.moveTo(streamX, 0);
-        ctx.lineTo(streamX, streamHeight);
-        ctx.stroke();
-        
-        // Data packets moving through conduits
-        for (let j = 0; j < 5; j++) {
-          const packetY = ((streamTime * 100 + j * 80) % (streamHeight + 40)) - 20;
-          
-          if (packetY >= 0 && packetY <= streamHeight) {
-            ctx.globalAlpha = 0.8;
-            ctx.fillStyle = j % 2 === 0 ? '#4facfe' : '#00ff88';
-            ctx.shadowColor = ctx.fillStyle;
-            ctx.shadowBlur = 4;
+            break;
             
-            ctx.beginPath();
-            ctx.arc(streamX, packetY, 3, 0, Math.PI * 2);
-            ctx.fill();
+          case 'trash':
+            // Draw trash/debris
+            ctx.fillStyle = element.color;
+            ctx.fillRect(element.x, element.y, element.width, element.height);
             
-            // Packet trail
-            ctx.globalAlpha = 0.3;
-            for (let k = 1; k <= 3; k++) {
+            // Add some texture
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(element.x + 1, element.y + 1, element.width - 2, 2);
+            break;
+            
+          case 'streetlight':
+            // Draw streetlight pole
+            ctx.fillStyle = element.color;
+            ctx.fillRect(element.x, element.y, element.width, element.height);
+            
+            // Light at top
+            if (element.light) {
+              const lightOpacity = 0.6 + Math.sin(time * 1.5 + element.x * 0.01) * 0.2;
+              ctx.globalAlpha = lightOpacity;
+              
+              // Light glow
+              const gradient = ctx.createRadialGradient(
+                element.x + element.width/2, element.y - 5, 0,
+                element.x + element.width/2, element.y - 5, 40
+              );
+              gradient.addColorStop(0, 'rgba(255, 255, 150, 0.8)');
+              gradient.addColorStop(1, 'rgba(255, 255, 150, 0)');
+              
+              ctx.fillStyle = gradient;
+              ctx.fillRect(element.x - 35, element.y - 40, 80, 80);
+              
+              // Light fixture
+              ctx.globalAlpha = 1;
+              ctx.fillStyle = '#444';
+              ctx.fillRect(element.x - 8, element.y - 8, element.width + 16, 8);
+            }
+            break;
+            
+          case 'vent':
+            // Draw vent grate
+            ctx.fillStyle = element.color;
+            ctx.fillRect(element.x, element.y, element.width, element.height);
+            
+            // Vent slats
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < element.height - 1; i += 3) {
               ctx.beginPath();
-              ctx.arc(streamX, packetY + k * 8, 2 - k * 0.5, 0, Math.PI * 2);
-              ctx.fill();
+              ctx.moveTo(element.x + 2, element.y + i);
+              ctx.lineTo(element.x + element.width - 2, element.y + i);
+              ctx.stroke();
             }
-          }
+            
+            // Glow effect
+            if (element.glow) {
+              const glowOpacity = 0.3 + Math.sin(time * 2 + element.x * 0.02) * 0.2;
+              ctx.globalAlpha = glowOpacity;
+              ctx.fillStyle = '#ff6600';
+              ctx.fillRect(element.x + 2, element.y + 2, element.width - 4, element.height - 4);
+            }
+            break;
+            
+          case 'puddle':
+            // Draw reflective puddle
+            ctx.fillStyle = element.color;
+            ctx.fillRect(element.x, element.y, element.width, element.height);
+            
+            // Reflection shimmer
+            if (element.reflective) {
+              const shimmer = 0.2 + Math.sin(time * 4 + element.x * 0.03) * 0.1;
+              ctx.globalAlpha = shimmer;
+              ctx.fillStyle = '#4facfe';
+              ctx.fillRect(element.x + 5, element.y, element.width - 10, 1);
+            }
+            break;
+            
+          case 'floating_debris':
+            // Update position
+            element.x += element.speedX;
+            element.y += element.speedY;
+            
+            // Wrap around screen
+            if (element.x > canvas.width + 10) element.x = -10;
+            if (element.x < -10) element.x = canvas.width + 10;
+            if (element.y > canvas.height + 10) element.y = -10;
+            if (element.y < -10) element.y = canvas.height + 10;
+            
+            // Draw floating debris
+            ctx.globalAlpha = element.opacity;
+            ctx.fillStyle = element.color;
+            ctx.fillRect(element.x, element.y, element.size, element.size);
+            break;
         }
         
         ctx.restore();
-      }
-      
-      // 13. Distant space structures/satellites
-      const satelliteTime = time * 0.2;
-      for (let i = 0; i < 2; i++) {
-        const satX = canvas.width * (0.3 + i * 0.4) + Math.sin(satelliteTime + i * 3) * 30;
-        const satY = canvas.height * 0.15 + Math.cos(satelliteTime * 0.7 + i * 2) * 10;
-        
-        ctx.save();
-        ctx.globalAlpha = 0.5;
-        
-        // Satellite body
-        ctx.fillStyle = '#333';
-        ctx.fillRect(satX - 8, satY - 4, 16, 8);
-        
-        // Solar panels
-        ctx.fillStyle = '#001122';
-        ctx.fillRect(satX - 15, satY - 2, 6, 4);
-        ctx.fillRect(satX + 9, satY - 2, 6, 4);
-        
-        // Communication dish
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(satX, satY - 8, 4, 0, Math.PI);
-        ctx.stroke();
-        
-        // Blinking status lights
-        if (Math.sin(time * 4 + i * 2) > 0.3) {
-          ctx.fillStyle = i % 2 === 0 ? '#ff4757' : '#4facfe';
-          ctx.shadowColor = ctx.fillStyle;
-          ctx.shadowBlur = 3;
-          ctx.globalAlpha = 0.9;
-          ctx.beginPath();
-          ctx.arc(satX + 6, satY, 1, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        
-        ctx.restore();
-      }
+      });
     }
 
-    function createParticles(x, y, color, count = 4, type = 'normal') {
-      // Only log if particles exceed reasonable limit
-      if (particlesRef.current.length > 100) {
-        console.warn(`⚠️ High particle count: ${particlesRef.current.length} - Creating ${count} more ${type} particles`);
-      }
-      
-      // Limit total particle count to prevent performance issues
-      if (particlesRef.current.length > 200) {
-        console.warn('🚫 Particle limit reached - skipping creation');
-        return;
-      }
-      
-      const newParticles = [];
-      
-      for (let i = 0; i < count; i++) {
-        let particle;
-        
-        if (type === 'explosion') {
-          // Explosive burst particles - radial spread
-          const angle = (i / count) * Math.PI * 2;
+    // Atmospheric background functions would go here if needed
+    
+    // Enhanced projectile system with multiple types
+    function fireProjectile(shooter, direction, type = 'normal') {
           const speed = 2 + Math.random() * 4;
           const life = 30 + Math.random() * 20; // Optimized shorter life
           
@@ -3077,11 +3607,12 @@ const SideScroller = ({ character, onBackToMenu }) => {
             rotation: Math.random() * Math.PI * 2,
             rotationSpeed: (Math.random() - 0.5) * 0.2
           };
-        } else if (type === 'spark') {
-          // Electric spark particles - fast moving
-          const angle = Math.random() * Math.PI * 2;
-          const speed = 4 + Math.random() * 6;
-          const life = 25 + Math.random() * 15; // Optimized shorter life
+        // CORRUPTED CODE REMOVED FROM HERE
+        // } else if (type === 'spark') {
+        //   // Electric spark particles - fast moving
+        //   const angle = Math.random() * Math.PI * 2;
+          // const speed = 4 + Math.random() * 6;
+          // const life = 25 + Math.random() * 15; // Optimized shorter life
           
           particle = {
             x: x + (Math.random() - 0.5) * 10,
@@ -3096,9 +3627,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
             trail: [], // For spark trails
             trailLength: 3 // Reduced trail length
           };
-        } else if (type === 'shockwave') {
+        // } else if (type === 'shockwave') {
           // Expanding shockwave rings
-          const life = 15 + Math.random() * 10; // Shorter life
+          // const life = 15 + Math.random() * 10; // Shorter life
           
           particle = {
             x: x,
@@ -3112,191 +3643,191 @@ const SideScroller = ({ character, onBackToMenu }) => {
             type: 'shockwave',
             expansion: 2 + Math.random() * 3
           };
-        } else if (type === 'debris') {
+        // } else if (type === 'debris') {
           // Heavy debris particles - affected by gravity
-          const life = 25 + Math.random() * 15; // Shorter life
+          // const life = 25 + Math.random() * 15; // Shorter life
           
-          particle = {
-            x: x + (Math.random() - 0.5) * 20,
-            y: y + (Math.random() - 0.5) * 20,
-            vx: (Math.random() - 0.5) * 4,
-            vy: (Math.random() - 0.5) * 4 - 2,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 3 + Math.random() * 5, // Smaller size
-            type: 'debris',
-            bounce: 0.3 + Math.random() * 0.4
-          };
-        } else if (type === 'impact') {
+          // particle = {
+            // x: x + (Math.random() - 0.5) * 20,
+            // y: y + (Math.random() - 0.5) * 20,
+            // vx: (Math.random() - 0.5) * 4,
+            // vy: (Math.random() - 0.5) * 4 - 2,
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 3 + Math.random() * 5, // Smaller size
+            // type: 'debris',
+            // bounce: 0.3 + Math.random() * 0.4
+          // };
+        // } else if (type === 'impact') {
           // Impact particles for combat hits
-          const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-          const speed = 1 + Math.random() * 3;
-          const life = 20 + Math.random() * 10;
+          // const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+          // const speed = 1 + Math.random() * 3;
+          // const life = 20 + Math.random() * 10;
           
-          particle = {
-            x: x + (Math.random() - 0.5) * 10,
-            y: y + (Math.random() - 0.5) * 10,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 2 + Math.random() * 4,
-            type: 'impact'
-          };
-        } else if (type === 'energy') {
+          // particle = {
+            // x: x + (Math.random() - 0.5) * 10,
+            // y: y + (Math.random() - 0.5) * 10,
+            // vx: Math.cos(angle) * speed,
+            // vy: Math.sin(angle) * speed,
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 2 + Math.random() * 4,
+            // type: 'impact'
+          // };
+        // } else if (type === 'energy') {
           // Energy particles for special moves
-          const angle = Math.random() * Math.PI * 2;
-          const speed = 2 + Math.random() * 4;
-          const life = 30 + Math.random() * 20;
+          // const angle = Math.random() * Math.PI * 2;
+          // const speed = 2 + Math.random() * 4;
+          // const life = 30 + Math.random() * 20;
           
-          particle = {
-            x: x + (Math.random() - 0.5) * 15,
-            y: y + (Math.random() - 0.5) * 15,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 3 + Math.random() * 4,
-            type: 'energy',
-            glow: true,
-            pulseRate: 0.1 + Math.random() * 0.1
-          };
-        } else if (type === 'dust') {
+          // particle = {
+            // x: x + (Math.random() - 0.5) * 15,
+            // y: y + (Math.random() - 0.5) * 15,
+            // vx: Math.cos(angle) * speed,
+            // vy: Math.sin(angle) * speed,
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 3 + Math.random() * 4,
+            // type: 'energy',
+            // glow: true,
+            // pulseRate: 0.1 + Math.random() * 0.1
+          // };
+        // } else if (type === 'dust') {
           // Dust particles for movement
-          const life = 15 + Math.random() * 10;
+          // const life = 15 + Math.random() * 10;
           
-          particle = {
-            x: x + (Math.random() - 0.5) * 25,
-            y: y + (Math.random() - 0.5) * 8,
-            vx: (Math.random() - 0.5) * 2,
-            vy: -(Math.random() * 1.5),
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 1 + Math.random() * 3,
-            type: 'dust',
-            drift: true
-          };
-        } else if (type === 'trail') {
+          // particle = {
+            // x: x + (Math.random() - 0.5) * 25,
+            // y: y + (Math.random() - 0.5) * 8,
+            // vx: (Math.random() - 0.5) * 2,
+            // vy: -(Math.random() * 1.5),
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 1 + Math.random() * 3,
+            // type: 'dust',
+            // drift: true
+          // };
+        // } else if (type === 'trail') {
           // Trail particles for fast movement
-          const life = 12 + Math.random() * 8;
+          // const life = 12 + Math.random() * 8;
           
-          particle = {
-            x: x + (Math.random() - 0.5) * 8,
-            y: y + (Math.random() - 0.5) * 8,
-            vx: (Math.random() - 0.5) * 1,
-            vy: (Math.random() - 0.5) * 1,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 1 + Math.random() * 2,
-            type: 'trail',
-            fadeRate: 0.15
-          };
-        } else if (type === 'sparkle') {
+          // particle = {
+            // x: x + (Math.random() - 0.5) * 8,
+            // y: y + (Math.random() - 0.5) * 8,
+            // vx: (Math.random() - 0.5) * 1,
+            // vy: (Math.random() - 0.5) * 1,
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 1 + Math.random() * 2,
+            // type: 'trail',
+            // fadeRate: 0.15
+          // };
+        // } else if (type === 'sparkle') {
           // Sparkle particles for special items/effects
-          const life = 40 + Math.random() * 20;
+          // const life = 40 + Math.random() * 20;
           
-          particle = {
-            x: x + (Math.random() - 0.5) * 20,
-            y: y + (Math.random() - 0.5) * 20,
-            vx: (Math.random() - 0.5) * 1,
-            vy: -(Math.random() * 2),
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 2 + Math.random() * 3,
-            type: 'sparkle',
-            twinkle: true,
-            twinkleRate: 0.2
-          };
-        } else if (type === 'spiral') {
+          // particle = {
+            // x: x + (Math.random() - 0.5) * 20,
+            // y: y + (Math.random() - 0.5) * 20,
+            // vx: (Math.random() - 0.5) * 1,
+            // vy: -(Math.random() * 2),
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 2 + Math.random() * 3,
+            // type: 'sparkle',
+            // twinkle: true,
+            // twinkleRate: 0.2
+          // };
+        // } else if (type === 'spiral') {
           // Spiral particles for spinning attacks
-          const angle = (i / count) * Math.PI * 2;
-          const radius = 10 + Math.random() * 15;
-          const life = 25 + Math.random() * 15;
+          // const angle = (i / count) * Math.PI * 2;
+          // const radius = 10 + Math.random() * 15;
+          // const life = 25 + Math.random() * 15;
           
-          particle = {
-            x: x + Math.cos(angle) * radius,
-            y: y + Math.sin(angle) * radius,
-            vx: Math.cos(angle + Math.PI/2) * 2,
-            vy: Math.sin(angle + Math.PI/2) * 2,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 2 + Math.random() * 3,
-            type: 'spiral',
-            spiralSpeed: 0.1 + Math.random() * 0.1
-          };
-        } else if (type === 'glow') {
+          // particle = {
+            // x: x + Math.cos(angle) * radius,
+            // y: y + Math.sin(angle) * radius,
+            // vx: Math.cos(angle + Math.PI/2) * 2,
+            // vy: Math.sin(angle + Math.PI/2) * 2,
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 2 + Math.random() * 3,
+            // type: 'spiral',
+            // spiralSpeed: 0.1 + Math.random() * 0.1
+          // };
+        // } else if (type === 'glow') {
           // Glowing particles for aura effects
-          const life = 20 + Math.random() * 15;
+          // const life = 20 + Math.random() * 15;
           
-          particle = {
-            x: x + (Math.random() - 0.5) * 30,
-            y: y + (Math.random() - 0.5) * 30,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: (Math.random() - 0.5) * 0.5,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 3 + Math.random() * 4,
-            type: 'glow',
-            glow: true,
-            alpha: 0.4 + Math.random() * 0.4
-          };
-        } else if (type === 'aura') {
+          // particle = {
+            // x: x + (Math.random() - 0.5) * 30,
+            // y: y + (Math.random() - 0.5) * 30,
+            // vx: (Math.random() - 0.5) * 0.5,
+            // vy: (Math.random() - 0.5) * 0.5,
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 3 + Math.random() * 4,
+            // type: 'glow',
+            // glow: true,
+            // alpha: 0.4 + Math.random() * 0.4
+          // };
+        // } else if (type === 'aura') {
           // Aura particles that orbit around a point
-          const angle = (i / count) * Math.PI * 2;
-          const radius = 20 + Math.random() * 20;
-          const life = 60 + Math.random() * 30;
+          // const angle = (i / count) * Math.PI * 2;
+          // const radius = 20 + Math.random() * 20;
+          // const life = 60 + Math.random() * 30;
           
-          particle = {
-            x: x + Math.cos(angle) * radius,
-            y: y + Math.sin(angle) * radius,
-            vx: 0,
-            vy: 0,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 2 + Math.random() * 2,
-            type: 'aura',
-            centerX: x,
-            centerY: y,
-            angle: angle,
-            radius: radius,
-            orbitSpeed: 0.02 + Math.random() * 0.03
-          };
-        } else {
+          // particle = {
+            // x: x + Math.cos(angle) * radius,
+            // y: y + Math.sin(angle) * radius,
+            // vx: 0,
+            // vy: 0,
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 2 + Math.random() * 2,
+            // type: 'aura',
+            // centerX: x,
+            // centerY: y,
+            // angle: angle,
+            // radius: radius,
+            // orbitSpeed: 0.02 + Math.random() * 0.03
+          // };
+        // } else {
           // Normal particles - improved default
-          const life = 20 + Math.random() * 15; // Shorter life
+          // const life = 20 + Math.random() * 15; // Shorter life
           
-          particle = {
-            x: x + (Math.random() - 0.5) * 20,
-            y: y + (Math.random() - 0.5) * 20,
-            vx: (Math.random() - 0.5) * 4,
-            vy: (Math.random() - 0.5) * 4 - 1,
-            life: life,
-            maxLife: life,
-            color: color,
-            size: 3 + Math.random() * 5,
-            type: 'normal'
-          };
-        }
+          // particle = {
+            // x: x + (Math.random() - 0.5) * 20,
+            // y: y + (Math.random() - 0.5) * 20,
+            // vx: (Math.random() - 0.5) * 4,
+            // vy: (Math.random() - 0.5) * 4 - 1,
+            // life: life,
+            // maxLife: life,
+            // color: color,
+            // size: 3 + Math.random() * 5,
+            // type: 'normal'
+          // };
+        // }
         
-        newParticles.push(particle);
-      }
+        // newParticles.push(particle);
+      // }
       
-      const previousCount = particlesRef.current.length;
-      particlesRef.current.push(...newParticles);
+      // const previousCount = particlesRef.current.length;
+      // particlesRef.current.push(...newParticles);
       
       // Only log significant particle additions
-      if (particlesRef.current.length > previousCount + 5) {
-        console.log(`✅ PARTICLES ADDED: ${previousCount} -> ${particlesRef.current.length}`);
-      }
+      // if (particlesRef.current.length > previousCount + 5) {
+        // console.log(`✅ PARTICLES ADDED: ${previousCount} -> ${particlesRef.current.length}`);
+      // }
     }
 
     // Enhanced projectile system with multiple types
@@ -3357,6 +3888,45 @@ const SideScroller = ({ character, onBackToMenu }) => {
           bounce: false,
           piercing: false,
           homing: true
+        },
+        fire: {
+          speed: 6,
+          size: 7,
+          damage: 1.0,
+          life: 110,
+          color: shooter === playerRef.current ? '#ff6600' : '#ff4444',
+          gravity: -0.01, // Slight upward drift like flames
+          bounce: false,
+          piercing: false,
+          homing: false,
+          particleType: 'fire',
+          trailEffect: true
+        },
+        ice: {
+          speed: 5,
+          size: 6,
+          damage: 0.8,
+          life: 140,
+          color: shooter === playerRef.current ? '#88ddff' : '#aaeeff',
+          gravity: 0.03, // Falls like ice
+          bounce: false,
+          piercing: false,
+          homing: false,
+          particleType: 'ice',
+          freezeEffect: true
+        },
+        ember: {
+          speed: 4,
+          size: 5,
+          damage: 0.6,
+          life: 90,
+          color: shooter === playerRef.current ? '#ff8800' : '#ff6600',
+          gravity: 0.01,
+          bounce: true,
+          piercing: false,
+          homing: false,
+          particleType: 'ember',
+          sparkleTrail: true
         }
       };
       
@@ -3388,16 +3958,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
       };
       
       setProjectiles(prev => [...prev, newProjectile]);
-      console.log(`🚀 PROJECTILE CREATED: ${type} at (${newProjectile.x}, ${newProjectile.y}) - Total: ${projectiles.length + 1}`);
-      console.log(`📊 Projectile details:`, { 
-        x: newProjectile.x, 
-        y: newProjectile.y, 
-        vx: newProjectile.vx, 
-        vy: newProjectile.vy, 
-        size: newProjectile.size, 
-        color: newProjectile.color,
-        direction: direction 
-      });
+      // Reduced logging for performance
       
       // Muzzle flash particles removed - now only show on character hits
     }
@@ -3608,78 +4169,130 @@ const SideScroller = ({ character, onBackToMenu }) => {
     }
 
     function updateParticles() {
-      if (particlesRef.current.length > 0) {
+      // Performance optimization: only log every 60 frames
+      if (particlesRef.current.length > 0 && gameStateRef.current.frameCount % 60 === 0) {
         console.log(`⚡ UPDATING ${particlesRef.current.length} PARTICLES`);
       }
       
+      // Batch particle updates for better performance
       const updatedParticles = [];
+      const maxParticles = 200; // Limit total particles for performance
       
-      for (let i = 0; i < particlesRef.current.length; i++) {
+      // Process particles with performance optimization
+      for (let i = 0; i < Math.min(particlesRef.current.length, maxParticles); i++) {
         const particle = particlesRef.current[i];
-        let newParticle = { ...particle };
         
-        // Update based on particle type
-        if (particle.type === 'explosion') {
-          newParticle.x += particle.vx;
-          newParticle.y += particle.vy;
-          newParticle.vx *= 0.96; // Slow down over time
-          newParticle.vy *= 0.96;
-          newParticle.vy += 0.05; // Light gravity
-          if (particle.rotationSpeed !== undefined) {
-            newParticle.rotation += particle.rotationSpeed;
-          }
-          newParticle.life -= 1;
-        } else if (particle.type === 'spark') {
-          // Update trail with size limit
-          if (particle.trail) {
-            newParticle.trail = [...particle.trail, { x: particle.x, y: particle.y }];
-            // Limit trail length to prevent memory issues
-            if (newParticle.trail.length > particle.trailLength) {
-              newParticle.trail.shift();
+        // Skip dead particles early
+        if (particle.life <= 0) continue;
+        
+        const newParticle = { ...particle };
+        
+        // Update based on particle type with optimized calculations
+        switch (particle.type) {
+          case 'explosion':
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vx *= 0.96;
+            newParticle.vy = newParticle.vy * 0.96 + 0.05; // Combined operations
+            if (particle.rotationSpeed !== undefined) {
+              newParticle.rotation += particle.rotationSpeed;
             }
-          }
-          
-          newParticle.x += particle.vx;
-          newParticle.y += particle.vy;
-          newParticle.vx *= 0.92; // Fast deceleration
-          newParticle.vy *= 0.92;
-          newParticle.life -= 1;
-        } else if (particle.type === 'shockwave') {
-          newParticle.size += particle.expansion;
-          newParticle.life -= 1;
-        } else if (particle.type === 'debris') {
-          newParticle.x += particle.vx;
-          newParticle.y += particle.vy;
-          newParticle.vx *= 0.98; // Air resistance
-          newParticle.vy += 0.15; // Stronger gravity for debris
-          
-          // Bounce off ground
-          if (newParticle.y > GROUND_Y - 10) {
-            newParticle.y = GROUND_Y - 10;
-            newParticle.vy *= -particle.bounce;
-            newParticle.vx *= 0.8; // Friction on bounce
-          }
-          
-          newParticle.life -= 1;
-        } else {
-          // Normal particle physics
-          newParticle.x += particle.vx;
-          newParticle.y += particle.vy;
-          newParticle.vy += 0.08; // Light gravity
-          newParticle.vx *= 0.99; // Air resistance
-          newParticle.life -= 1;
+            break;
+            
+          case 'spark':
+            // Optimized trail management
+            if (particle.trail) {
+              newParticle.trail = [...particle.trail, { x: particle.x, y: particle.y }];
+              if (newParticle.trail.length > 5) { // Limit trail length
+                newParticle.trail.shift();
+              }
+            }
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vx *= 0.92;
+            newParticle.vy *= 0.92;
+            break;
+            
+          case 'shockwave':
+            newParticle.size += particle.expansion;
+            break;
+            
+          case 'debris':
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vx *= 0.98;
+            newParticle.vy += 0.15;
+            
+            // Ground collision check
+            if (newParticle.y > GROUND_Y - 10) {
+              newParticle.y = GROUND_Y - 10;
+              newParticle.vy *= -0.5; // Bounce factor
+              newParticle.vx *= 0.8;
+            }
+            break;
+            
+          case 'fire':
+            // Fire particles rise and flicker
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += particle.gravity || -0.02; // Rise upward
+            newParticle.vx *= 0.95;
+            // Add flickering effect
+            if (particle.flicker) {
+              newParticle.size = Math.max(0.5, particle.size + (Math.random() - 0.5) * 0.8);
+            }
+            break;
+            
+          case 'ember':
+            // Ember particles with gravity and sparkle
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += particle.gravity || 0.01;
+            newParticle.vx *= 0.97;
+            break;
+            
+          case 'ice':
+            // Ice particles with rotation and shimmer
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += particle.gravity || 0.015;
+            newParticle.vx *= 0.98;
+            if (particle.rotationSpeed !== undefined) {
+              newParticle.rotation += particle.rotationSpeed;
+            }
+            break;
+            
+          case 'frost':
+            // Frost particles drift slowly
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += particle.gravity || -0.005; // Slight upward drift
+            newParticle.vx *= 0.99;
+            // Add drifting motion
+            if (particle.drift) {
+              newParticle.vx += (Math.random() - 0.5) * 0.02;
+              newParticle.vy += (Math.random() - 0.5) * 0.01;
+            }
+            break;
+            
+          default:
+            // Standard particle physics
+            newParticle.x += particle.vx;
+            newParticle.y += particle.vy;
+            newParticle.vy += 0.08;
+            newParticle.vx *= 0.99;
         }
         
-        // Only keep particles that are still alive
+        // Decrease life for all particles
+        newParticle.life--;
+        
+        // Keep particle if still alive
         if (newParticle.life > 0) {
           updatedParticles.push(newParticle);
         }
       }
       
-      if (particlesRef.current.length !== updatedParticles.length) {
-        console.log(`💀 PARTICLES EXPIRED: ${particlesRef.current.length} -> ${updatedParticles.length}`);
-      }
-      
+      // Update particles reference
       particlesRef.current = updatedParticles;
     }
 
@@ -3704,42 +4317,8 @@ const SideScroller = ({ character, onBackToMenu }) => {
       // Increment frame counter for debugging
       gameStateRef.current.frameCount++;
       
-      // Check for game over conditions first
-      if (playerRef.current.health <= 0 && !gameOver.active) {
-        setGameOver({ 
-          active: true, 
-          winner: 'enemy', 
-          message: `${enemyRef.current.name} Wins! You Lose!` 
-        });
-        
-        // Add death effect to loser and victory effect to winner
-        if (playerSpriteRef.current) {
-          playerSpriteRef.current.setAnimation('death');
-        }
-        if (enemySpriteRef.current) {
-          enemySpriteRef.current.playSpecialEffect('victory');
-        }
-        
-        return; // Stop updating game
-      }
-      
-      if (enemyRef.current.health <= 0 && !gameOver.active) {
-        setGameOver({ 
-          active: true, 
-          winner: 'player', 
-          message: `${playerRef.current.name} Wins! Victory!` 
-        });
-        
-        // Add victory effect to winner and death effect to loser
-        if (playerSpriteRef.current) {
-          playerSpriteRef.current.playSpecialEffect('victory');
-        }
-        if (enemySpriteRef.current) {
-          enemySpriteRef.current.setAnimation('death');
-        }
-        
-        return; // Stop updating game
-      }
+      // Individual round victories are handled by round system, not game over
+      // Game over only triggers when match is complete (someone wins 2 rounds)
       
       // Don't update game if game is over
       if (gameOver.active) return;
@@ -3801,8 +4380,218 @@ const SideScroller = ({ character, onBackToMenu }) => {
         enemySpriteRef.current.update();
       }
       
-      // Update game timer
-      setGameTime(prev => prev + 1);
+      // Update game timer (countdown)
+      if (roundActive && gameTime > 0) {
+        setGameTime(prev => prev - 1);
+        
+        // Timer warning sounds/effects
+        const remainingSeconds = Math.ceil(gameTime / 60);
+        if (remainingSeconds === 10) {
+          console.log('⏰ 10 seconds remaining!');
+          // Could trigger warning sound here
+        } else if (remainingSeconds === 5) {
+          console.log('🚨 5 seconds remaining!');
+          // Could trigger urgent sound here
+        }
+      }
+      
+      // Handle round end when timer reaches zero
+      if (gameTime === 0 && roundActive) {
+        handleRoundEnd('Time Up');
+      }
+      
+      // Check for knockout victory
+      if (roundActive) {
+        const playerHealth = playerRef.current.health;
+        const enemyHealth = enemyRef.current.health;
+        
+        if (playerHealth <= 0) {
+          handleRoundEnd('Knockout', enemyRef.current.name || 'Enemy');
+        } else if (enemyHealth <= 0) {
+          handleRoundEnd('Knockout', playerRef.current.name || 'Player');
+        }
+      }
+      
+      // Function to handle round end
+      function handleRoundEnd(endType, winner = null) {
+        setRoundActive(false);
+        
+        let roundWinner = winner;
+        let endMessage = '';
+        
+        if (endType === 'Time Up') {
+          // Determine winner based on health when time runs out
+          const playerHealth = playerRef.current.health;
+          const enemyHealth = enemyRef.current.health;
+          
+          if (playerHealth > enemyHealth) {
+            roundWinner = playerRef.current.name || 'Player';
+            endMessage = `${roundWinner} wins by decision!`;
+          } else if (enemyHealth > playerHealth) {
+            roundWinner = enemyRef.current.name || 'Enemy';
+            endMessage = `${roundWinner} wins by decision!`;
+          } else {
+            roundWinner = 'Draw';
+            endMessage = 'Round ends in a draw!';
+          }
+        } else if (endType === 'Knockout') {
+          endMessage = `${roundWinner} wins by knockout!`;
+        }
+        
+        // Update match score (no points for draws)
+        if (roundWinner !== 'Draw') {
+          setLastRoundWinner(roundWinner);
+          if (roundWinner === (playerRef.current.name || 'Player')) {
+            setMatchScore(prev => ({ ...prev, player: prev.player + 1 }));
+          } else {
+            setMatchScore(prev => ({ ...prev, enemy: prev.enemy + 1 }));
+          }
+        }
+        
+        console.log(`🥊 Round ${roundNumber}: ${endMessage}`);
+        
+        // Check if match is complete (best of 3 - first to win 2 rounds)
+        setTimeout(() => {
+          const newPlayerScore = roundWinner === (playerRef.current.name || 'Player') ? 
+            matchScore.player + 1 : matchScore.player;
+          const newEnemyScore = roundWinner === (enemyRef.current.name || 'Enemy') ? 
+            matchScore.enemy + 1 : matchScore.enemy;
+          
+          // Check for match victory (first to 2 rounds wins)
+          if (newPlayerScore >= 2 || newEnemyScore >= 2) {
+            // Match complete - someone won 2 rounds
+            setMatchComplete(true);
+            let finalMessage = '';
+            let gameOverWinner = '';
+            
+            if (newPlayerScore >= 2) {
+              const matchWinner = playerRef.current.name || 'Player';
+              finalMessage = `🏆 MATCH COMPLETE! ${matchWinner} wins ${newPlayerScore}-${newEnemyScore}!`;
+              gameOverWinner = 'player';
+            } else {
+              const matchWinner = enemyRef.current.name || 'Enemy';
+              finalMessage = `🏆 MATCH COMPLETE! ${matchWinner} wins ${newEnemyScore}-${newPlayerScore}!`;
+              gameOverWinner = 'enemy';
+            }
+            
+            console.log(finalMessage);
+            
+            // Show victory screen after match completion
+            setTimeout(() => {
+              setGameOver({ 
+                active: true, 
+                winner: gameOverWinner, 
+                message: finalMessage 
+              });
+            }, 1000); // Show victory screen after 1 second
+            
+            // Option to restart match after victory screen
+            setTimeout(() => {
+              restartMatch();
+            }, 8000); // Extended time to see victory screen
+          } else if (roundNumber >= 3) {
+            // All 3 rounds completed but no clear winner (shouldn't happen with best-of-3)
+            setMatchComplete(true);
+            const finalMessage = `🤝 MATCH COMPLETE! It's a draw ${newPlayerScore}-${newEnemyScore}!`;
+            console.log(finalMessage);
+            
+            // Show draw screen
+            setTimeout(() => {
+              setGameOver({ 
+                active: true, 
+                winner: 'draw', 
+                message: finalMessage 
+              });
+            }, 1000);
+            
+            setTimeout(() => {
+              restartMatch();
+            }, 8000);
+          } else {
+            // Continue to next round
+            console.log(`📊 Current match score: ${newPlayerScore}-${newEnemyScore} (need 2 to win)`);
+            startNextRound();
+          }
+        }, 3000);
+      }
+      
+      // Function to restart the entire match
+      function restartMatch() {
+        setRoundNumber(1);
+        setMatchScore({ player: 0, enemy: 0 });
+        setMatchComplete(false);
+        setLastRoundWinner(null);
+        setGameOver({ active: false, winner: null, message: '' }); // Clear game over state
+        
+        // Start with Round 1 announcement
+        setRoundAnnouncement({
+          active: true,
+          phase: 'announcing',
+          timer: 180, // 3 seconds for announcement
+          roundToShow: 1
+        });
+        setRoundActive(false); // Keep round inactive during announcement
+        
+        // Reset everything
+        playerRef.current.health = playerRef.current.maxHealth;
+        enemyRef.current.health = enemyRef.current.maxHealth;
+        playerRef.current.x = 150;
+        playerRef.current.y = GROUND_Y;
+        enemyRef.current.x = 650;
+        enemyRef.current.y = GROUND_Y;
+        
+        console.log('🆕 NEW MATCH STARTED! Best-of-3 - First to win 2 rounds wins!');
+      }
+      
+      // Function to start next round
+      function startNextRound() {
+        const nextRoundNumber = roundNumber + 1;
+        setRoundNumber(nextRoundNumber);
+        
+        // Start with announcement, round inactive
+        setRoundAnnouncement({
+          active: true,
+          phase: 'announcing',
+          timer: 180, // 3 seconds for announcement
+          roundToShow: nextRoundNumber
+        });
+        setRoundActive(false); // Keep round inactive during announcement
+        
+        // Reset player and enemy health for new round
+        playerRef.current.health = playerRef.current.maxHealth;
+        enemyRef.current.health = enemyRef.current.maxHealth;
+        
+        // Reset positions
+        playerRef.current.x = 150;
+        playerRef.current.y = GROUND_Y;
+        enemyRef.current.x = 650;
+        enemyRef.current.y = GROUND_Y;
+        
+        // Reset any combat states
+        playerRef.current.isAttacking = false;
+        playerRef.current.attackCooldown = 0;
+        enemyRef.current.isAttacking = false;
+        enemyRef.current.attackCooldown = 0;
+        
+        console.log(`🥊 Round ${nextRoundNumber} - Announcement Starting!`);
+      }
+      
+      // Handle round announcement timer
+      if (roundAnnouncement.active) {
+        setRoundAnnouncement(prev => {
+          const newTimer = prev.timer - 1;
+          
+          if (newTimer <= 0) {
+            // Announcement finished, start the round
+            setRoundActive(true);
+            setGameTime(3600); // Reset timer to 60 seconds
+            console.log(`🥊 Round ${prev.roundToShow} - FIGHT!`);
+            return { active: false, phase: 'none', timer: 0, roundToShow: prev.roundToShow };
+          }
+          
+          return { ...prev, timer: newTimer };
+        });
+      }
       
       // Update combo timer
       if (combo.timer > 0) {
@@ -4068,9 +4857,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
       
       // Enhanced projectile update system with physics and homing
       setProjectiles(prev => {
-        if (prev.length > 0) {
-          console.log(`⚡ UPDATING ${prev.length} PROJECTILES`);
-        }
+        // Removed excessive logging for performance
         const updatedProjectiles = [];
         
         for (let i = 0; i < prev.length; i++) {
@@ -4202,8 +4989,7 @@ const SideScroller = ({ character, onBackToMenu }) => {
                 enemyRef.current.vy -= 1 + (baseKnockback * 0.2); // Air knockback
               }
               
-              // Add knockback visual feedback
-              console.log(`💥 Enemy knocked back by ${projectile.type} projectile (force: ${baseKnockback})`);
+              // Reduced knockback logging for performance
               
               // Enhanced impact effects based on projectile type
               const impactParticleCount = projectile.type === 'power' ? 6 : 
@@ -4219,6 +5005,21 @@ const SideScroller = ({ character, onBackToMenu }) => {
                 createParticles(projectile.x, projectile.y, '#ff8800', 3, 'debris');
               } else if (projectile.type === 'plasma') {
                 createParticles(projectile.x, projectile.y, projectile.color, 3, 'debris');
+              } else if (projectile.type === 'fire') {
+                // Fire projectile creates burning effects
+                createParticles(projectile.x, projectile.y, '#ff6600', 5, 'fire');
+                createParticles(projectile.x, projectile.y, '#ff8800', 3, 'ember');
+                createParticles(projectile.x, projectile.y, '#ff4444', 2, 'smoke');
+                setScreenShake({ active: true, intensity: 8 + baseKnockback, timer: 12 });
+              } else if (projectile.type === 'ice') {
+                // Ice projectile creates freezing effects
+                createParticles(projectile.x, projectile.y, '#88ddff', 4, 'ice');
+                createParticles(projectile.x, projectile.y, '#aaeeff', 6, 'frost');
+                createParticles(projectile.x, projectile.y, '#ffffff', 2, 'sparkle');
+              } else if (projectile.type === 'ember') {
+                // Ember projectile creates scattered burning particles
+                createParticles(projectile.x, projectile.y, '#ff8800', 4, 'ember');
+                createParticles(projectile.x, projectile.y, '#ff6600', 2, 'fire');
               } else if (projectile.type === 'homing') {
                 // Homing projectiles create directional knockback particles
                 createParticles(projectile.x + knockbackDirection * 20, projectile.y, projectile.color, 4, 'spark');
@@ -4338,21 +5139,65 @@ const SideScroller = ({ character, onBackToMenu }) => {
       if (enemySpriteRef.current) {
         enemySpriteRef.current.update();
       }
+      
+      // Keep particles visible during pause by updating their visual effects
+      // but don't update physics (position, velocity, etc.)
+      // Note: Particles are managed via particlesRef, not state
+      // During pause, we maintain particle visual state without physics updates
+      
+      // Keep projectiles visible during pause by preserving their trails
+      // Don't update physics, just maintain visual state
+      setProjectiles(prev => {
+        return prev.map(projectile => {
+          return {
+            ...projectile,
+            // Preserve projectile state during pause
+            // Trails and visual effects can continue
+          };
+        });
+      });
     }
 
-    function loop() {
+    function loop(currentTime = 0) {
       try {
-        // Game loop running silently for performance
+        // Enhanced frame rate optimization
+        const deltaTime = currentTime - (lastFrameTime || currentTime);
+        lastFrameTime = currentTime;
+        
+        // Skip frame if running too fast (frame rate limiting)
+        if (deltaTime < 16.67) { // Limit to 60 FPS max
+          animationFrameId = requestAnimationFrame(loop);
+          return;
+        }
+        
+        // Update frame counter for performance monitoring
+        frameCount++;
         
         if (!isPaused && !gameOver.active) {
           // Always run the game, use fallback rendering if sprites not loaded
-          update();
+          update(deltaTime);
           draw();
         } else {
           // Game is paused or over, still update sprite animations and draw current state
           updateSpritesOnly();
           draw();
         }
+        
+        // ALWAYS ensure critical UI elements are visible
+        // This fixes the issue where elements only appear after pause
+        if (frameCount < 10) {
+          // Force draw on first few frames to ensure everything is visible
+          console.log(`🎨 Force draw frame ${frameCount} to ensure UI visibility`);
+          draw();
+        }
+        
+        // Performance monitoring - calculate FPS every 60 frames
+        if (frameCount % 60 === 0) {
+          const fps = Math.round(1000 / deltaTime);
+          gameStateRef.current.fps = fps;
+          gameStateRef.current.frameTime = deltaTime;
+        }
+        
       } catch (error) {
         console.error('❌ Error in game loop:', error);
         console.error('❌ Error stack:', error.stack);
@@ -4370,8 +5215,17 @@ const SideScroller = ({ character, onBackToMenu }) => {
       animationFrameId = requestAnimationFrame(loop);
     }
     console.log('🚀 Starting game loop...');
-    loop();
     
+    // Force an initial draw to ensure UI elements appear immediately
+    try {
+      console.log('🎨 Forcing initial draw...');
+      draw();
+    } catch (initialDrawError) {
+      console.warn('⚠️ Initial draw failed, will retry in game loop:', initialDrawError);
+    }
+    
+    loop();
+
     return () => {
       console.log('🛑 Cleaning up game loop...');
       cancelAnimationFrame(animationFrameId);
@@ -4567,6 +5421,24 @@ const SideScroller = ({ character, onBackToMenu }) => {
         console.log('Keyboard: Homing projectile fired');
         fireProjectile(playerRef.current, playerRef.current.facing, 'homing');
         playerRef.current.attackCooldown = 60;
+        
+      } else if ((e.key === '4') && playerRef.current.attackCooldown === 0) {
+        // Fire projectile (4 key)
+        console.log('Keyboard: Fire projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'fire');
+        playerRef.current.attackCooldown = 30;
+        
+      } else if ((e.key === '5') && playerRef.current.attackCooldown === 0) {
+        // Ice projectile (5 key)
+        console.log('Keyboard: Ice projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'ice');
+        playerRef.current.attackCooldown = 40;
+        
+      } else if ((e.key === '6') && playerRef.current.attackCooldown === 0) {
+        // Ember projectile (6 key)
+        console.log('Keyboard: Ember projectile fired');
+        fireProjectile(playerRef.current, playerRef.current.facing, 'ember');
+        playerRef.current.attackCooldown = 25;
       
       } else if (e.key === 't' || e.key === 'T') {
         // Manual particle test (T key) - simulates character hit effects
@@ -4760,9 +5632,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
             leftKick: [0], // A button  
             rightKick: [1], // B button
             special: [4, 5], // LB and RB
-            pause: [7], // Menu button
+            pause: [9], // Menu button (was incorrectly set to 7)
             leftProjectile: [6], // LT trigger
-            rightProjectile: [7], // RT trigger (need to handle this differently)
+            rightProjectile: [7], // RT trigger (now free from pause conflict)
             heavy: [4, 5] // LB and RB
           },
           Generic: {
@@ -4958,21 +5830,13 @@ const SideScroller = ({ character, onBackToMenu }) => {
         // Enhanced projectile controls with different types
         const leftProjectilePressed = controls.leftProjectile?.some(btn => gp.buttons[btn]?.pressed);
         const lastLeftProjectilePressed = controls.leftProjectile?.some(btn => lastGamepadState.buttons[btn]);
+        const rightProjectilePressed = controls.rightProjectile?.some(btn => gp.buttons[btn]?.pressed);
+        const lastRightProjectilePressed = controls.rightProjectile?.some(btn => lastGamepadState.buttons[btn]);
         
         if (leftProjectilePressed && !lastLeftProjectilePressed && playerRef.current.attackCooldown === 0) {
           console.log(`${gamepadType} controller: Normal projectile fired`);
           fireProjectile(playerRef.current, playerRef.current.facing, 'normal');
           playerRef.current.attackCooldown = 20;
-        }
-        
-        // Handle R2/RT for power projectile
-        const rightProjectilePressed = controls.rightProjectile?.some(btn => gp.buttons[btn]?.pressed);
-        const lastRightProjectilePressed = controls.rightProjectile?.some(btn => lastGamepadState.buttons[btn]);
-          
-        if (rightProjectilePressed && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
-          console.log(`${gamepadType} controller: Power projectile fired`);
-          fireProjectile(playerRef.current, playerRef.current.facing, 'power');
-          playerRef.current.attackCooldown = 45;
         }
         
         // Face buttons for different projectile types
@@ -5003,6 +5867,36 @@ const SideScroller = ({ character, onBackToMenu }) => {
           playerRef.current.attackCooldown = 60;
         }
         
+        // Enhanced Fire & Ice projectiles using D-pad + trigger combinations
+        const dpadDown = gp.buttons[13]?.pressed; // D-pad down
+        const dpadUp = gp.buttons[12]?.pressed; // D-pad up
+        const dpadLeft = gp.buttons[14]?.pressed; // D-pad left
+        
+        // Fire projectile: D-pad Down + R2/RT
+        if (rightProjectilePressed && dpadDown && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: 🔥 Fire projectile fired (D-pad Down + R2)`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'fire');
+          playerRef.current.attackCooldown = 30;
+        }
+        // Ice projectile: D-pad Up + R2/RT  
+        else if (rightProjectilePressed && dpadUp && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: ❄️ Ice projectile fired (D-pad Up + R2)`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'ice');
+          playerRef.current.attackCooldown = 40;
+        }
+        // Ember projectile: D-pad Left + R2/RT
+        else if (rightProjectilePressed && dpadLeft && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: ✨ Ember projectile fired (D-pad Left + R2)`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'ember');
+          playerRef.current.attackCooldown = 25;
+        }
+        // Standard power projectile: R2/RT alone
+        else if (rightProjectilePressed && !lastRightProjectilePressed && playerRef.current.attackCooldown === 0) {
+          console.log(`${gamepadType} controller: Power projectile fired`);
+          fireProjectile(playerRef.current, playerRef.current.facing, 'power');
+          playerRef.current.attackCooldown = 45;
+        }
+
         // Pause (Options/Menu button)
         const pausePressed = controls.pause.some(btn => gp.buttons[btn]?.pressed);
         const lastPausePressed = controls.pause.some(btn => lastGamepadState.buttons[btn]);
@@ -5042,9 +5936,131 @@ const SideScroller = ({ character, onBackToMenu }) => {
     };
   }, [isPaused, gameOver.active]);
 
+  // OVERRIDE: Correct fireProjectile function (this will override the corrupted one above)
+  function fireProjectile(shooter, direction, type = 'normal') {
+    // Projectile type configurations
+    const projectileTypes = {
+      normal: {
+        speed: 3,
+        size: 8,
+        damage: 0.7,
+        life: 240,
+        color: shooter === playerRef.current ? '#4facfe' : '#ff4757',
+        gravity: 0,
+        bounce: false,
+        piercing: false,
+        homing: false
+      },
+      power: {
+        speed: 2,
+        size: 12,
+        damage: 1.2,
+        life: 300,
+        color: shooter === playerRef.current ? '#00ff88' : '#ff8800',
+        gravity: 0,
+        bounce: false,
+        piercing: true,
+        homing: false
+      },
+      rapid: {
+        speed: 4,
+        size: 6,
+        damage: 0.4,
+        life: 180,
+        color: shooter === playerRef.current ? '#ffff00' : '#ff0088',
+        gravity: 0,
+        bounce: false,
+        piercing: false,
+        homing: false
+      },
+      plasma: {
+        speed: 7,
+        size: 8,
+        damage: 0.9,
+        life: 100,
+        color: shooter === playerRef.current ? '#88ffff' : '#ff4400',
+        gravity: 0.02,
+        bounce: true,
+        piercing: false,
+        homing: false
+      },
+      homing: {
+        speed: 5,
+        size: 7,
+        damage: 0.8,
+        life: 180,
+        color: shooter === playerRef.current ? '#ff00ff' : '#00ffff',
+        gravity: 0,
+        bounce: false,
+        piercing: false,
+        homing: true
+      }
+    };
+    
+    const config = projectileTypes[type] || projectileTypes.normal;
+    const isPlayer = shooter === playerRef.current;
+    
+    const newProjectile = {
+      x: shooter.x + (direction === 'right' ? 40 : -40),
+      y: shooter.y - 40,
+      vx: direction === 'right' ? config.speed : -config.speed,
+      vy: 0,
+      size: config.size,
+      type: type,
+      owner: isPlayer ? 'player' : 'enemy',
+      damage: Math.floor(shooter.attack * config.damage),
+      life: config.life,
+      maxLife: config.life,
+      color: config.color,
+      gravity: config.gravity,
+      bounce: config.bounce,
+      piercing: config.piercing,
+      homing: config.homing,
+      bounceCount: 0,
+      maxBounces: 3,
+      trail: [],
+      trailLength: type === 'plasma' ? 8 : 5,
+      rotation: 0,
+      rotationSpeed: (Math.random() - 0.5) * 0.3
+    };
+    
+    setProjectiles(prev => [...prev, newProjectile]);
+    console.log(`🚀 Projectile fired: ${type} at (${newProjectile.x}, ${newProjectile.y}) with speed ${config.speed}`);
+  }
+
   return (
     <div style={{ textAlign: 'center', marginTop: '2rem', position: 'relative' }}>
-      <canvas ref={canvasRef} width={1200} height={500} style={{ background: 'linear-gradient(180deg, #1a1a3a 60%, #222 100%)', borderRadius: '12px', boxShadow: '0 2px 16px #0008', maxWidth: '100%' }} />
+      <canvas ref={canvasRef} width={1200} height={500} style={{ background: 'linear-gradient(180deg, #3a3a5a 60%, #444 100%)', borderRadius: '12px', boxShadow: '0 2px 16px #0008', maxWidth: '100%' }} />
+      
+      {/* Enhanced Particle System Controls */}
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        left: '10px',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        padding: '10px',
+        borderRadius: '8px',
+        color: '#fff',
+        fontSize: '0.9rem',
+        fontFamily: 'monospace',
+        pointerEvents: 'none'
+      }}>
+        <div style={{ marginBottom: '5px', color: '#4facfe', fontWeight: 'bold' }}>🔥❄️ Enhanced Particle System</div>
+        <div><strong>Keyboard:</strong></div>
+        <div>Q: Normal | R: Rapid | 1: Power</div>
+        <div>2: Plasma | 3: Homing</div>
+        <div style={{ color: '#ff6600' }}>4: 🔥 Fire | 5: ❄️ Ice | 6: ✨ Ember</div>
+        <div style={{ marginTop: '8px' }}><strong>🎮 Gamepad:</strong></div>
+        <div style={{ fontSize: '0.85rem' }}>L2: Normal | R2: Power</div>
+        <div style={{ fontSize: '0.85rem', color: '#ff6600' }}>
+          D-pad ⬇️+R2: 🔥 Fire | D-pad ⬆️+R2: ❄️ Ice | D-pad ⬅️+R2: ✨ Ember
+        </div>
+        <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '5px' }}>
+          Fire: Rising flames + burning effects<br/>
+          Ice: Crystalline shards + frost trails<br/>
+          Ember: Sparkling projectiles + glowing particles
+        </div>
+      </div>
       
       {/* Pause Overlay */}
       {isPaused && !gameOver.active && (
@@ -5055,14 +6071,15 @@ const SideScroller = ({ character, onBackToMenu }) => {
             left: '0',
             right: '0',
             bottom: '0',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             borderRadius: '12px',
             color: '#fff',
-            pointerEvents: 'auto'
+            pointerEvents: 'auto',
+            paddingLeft: '40px'
           }}
           onClick={(e) => {
             console.log('Pause overlay clicked');
@@ -5071,15 +6088,15 @@ const SideScroller = ({ character, onBackToMenu }) => {
         >
           <h2 style={{ margin: '0 0 1rem 0', fontSize: '3rem', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>⏸️ PAUSED</h2>
           <p style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', opacity: 0.9 }}>Press ESC or P to resume</p>
-          <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', alignItems: 'flex-start' }}>
             <button
               onClick={handleResumeGame}
               style={{
                 padding: '12px 24px',
                 fontSize: '1.1rem',
-                backgroundColor: '#4facfe',
-                color: '#fff',
-                border: 'none',
+                backgroundColor: 'transparent',
+                color: '#4facfe',
+                border: '2px solid #4facfe',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 boxShadow: '0 4px 12px rgba(79, 172, 254, 0.3)',
@@ -5095,9 +6112,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
               style={{
                 padding: '12px 24px',
                 fontSize: '1.1rem',
-                backgroundColor: '#ff4757',
-                color: '#fff',
-                border: 'none',
+                backgroundColor: 'transparent',
+                color: '#ff4757',
+                border: '2px solid #ff4757',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 boxShadow: '0 4px 12px rgba(255, 71, 87, 0.3)',
@@ -5133,9 +6150,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
             margin: '0 0 1rem 0', 
             fontSize: '4rem', 
             textShadow: '3px 3px 6px rgba(0,0,0,0.8)',
-            color: gameOver.winner === 'player' ? '#2ed573' : '#ff4757'
+            color: gameOver.winner === 'player' ? '#2ed573' : gameOver.winner === 'draw' ? '#ffd700' : '#ff4757'
           }}>
-            {gameOver.winner === 'player' ? '🎉 VICTORY!' : '💀 YOU LOSE!'}
+            {gameOver.winner === 'player' ? '🎉 VICTORY!' : gameOver.winner === 'draw' ? '🤝 DRAW!' : '💀 YOU LOSE!'}
           </h1>
           <p style={{ 
             margin: '0 0 2rem 0', 

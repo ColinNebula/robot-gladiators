@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useGame } from '../context/GameContext';
 import { useGamepad, useAudio } from '../hooks/useGameHooks';
+import useGamepadNavigation from '../hooks/useGamepadNavigation';
 // import StorageSettings from '../components/StorageSettings';
 
 const SettingsPage = () => {
@@ -32,6 +34,53 @@ const SettingsPage = () => {
     { id: 'storage', label: 'Storage', icon: '💾' },
     { id: 'data', label: 'Data & Privacy', icon: '🔒' }
   ];
+
+  const navigate = useNavigate();
+
+  // Create navigation items for gamepad
+  const getNavigationItems = () => {
+    const items = [];
+    // Add section navigation
+    sections.forEach((section, index) => {
+      items.push(`section-${index}`);
+    });
+    // Add theme options
+    availableThemes.forEach(theme => {
+      items.push(`theme-${theme}`);
+    });
+    // Add other controls
+    items.push('toggle-mute', 'volume-up', 'volume-down', 'back-to-menu');
+    return items;
+  };
+
+  // Gamepad navigation setup
+  const {
+    selectedIndex,
+    isGamepadConnected,
+    isSelected
+  } = useGamepadNavigation(getNavigationItems(), {
+    onSelect: (item) => {
+      if (item.startsWith('section-')) {
+        const sectionIndex = parseInt(item.replace('section-', ''));
+        setSelectedSection(sectionIndex);
+      } else if (item.startsWith('theme-')) {
+        const themeName = item.replace('theme-', '');
+        handleThemeChange(themeName);
+      } else if (item === 'toggle-mute') {
+        toggleMute();
+      } else if (item === 'volume-up') {
+        setVolume(Math.min(100, volume + 10));
+      } else if (item === 'volume-down') {
+        setVolume(Math.max(0, volume - 10));
+      } else if (item === 'back-to-menu') {
+        navigate('/');
+      }
+    },
+    onBack: () => {
+      navigate('/');
+    },
+    wrapAround: true
+  });
 
   const handleThemeChange = (themeName) => {
     toggleTheme(themeName);

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
+import useGamepadNavigation from '../hooks/useGamepadNavigation';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const TwoPlayerPage = () => {
@@ -67,6 +68,38 @@ const TwoPlayerPage = () => {
       navigate('/character-select');
     }, 1500);
   };
+
+  // Navigation items for gamepad
+  const getNavigationItems = () => {
+    const items = [];
+    gameModes.forEach(mode => {
+      items.push(`mode-${mode.id}`);
+    });
+    items.push('start-game', 'back-to-menu');
+    return items;
+  };
+
+  // Gamepad navigation setup
+  const {
+    isGamepadConnected,
+    isSelected
+  } = useGamepadNavigation(getNavigationItems(), {
+    onSelect: (item) => {
+      if (item.startsWith('mode-')) {
+        const modeId = item.replace('mode-', '');
+        setSelectedMode(modeId);
+      } else if (item === 'start-game') {
+        handleStartGame();
+      } else if (item === 'back-to-menu') {
+        navigate('/play');
+      }
+    },
+    onBack: () => {
+      navigate('/play');
+    },
+    wrapAround: true,
+    enabled: !isLoading
+  });
 
   if (isLoading) {
     return (

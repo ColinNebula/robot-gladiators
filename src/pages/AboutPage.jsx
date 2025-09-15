@@ -1,9 +1,30 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import useGamepadNavigation from '../hooks/useGamepadNavigation';
 
 const AboutPage = () => {
   const { currentTheme } = useTheme();
+  const navigate = useNavigate();
+
+  // Navigation items for gamepad
+  const navigationItems = ['back-to-menu'];
+
+  // Gamepad navigation setup
+  const {
+    isGamepadConnected,
+    isSelected
+  } = useGamepadNavigation(navigationItems, {
+    onSelect: (item) => {
+      if (item === 'back-to-menu') {
+        navigate('/');
+      }
+    },
+    onBack: () => {
+      navigate('/');
+    }
+  });
 
   const features = [
     {

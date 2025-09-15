@@ -108,6 +108,31 @@
           box-shadow: 0 0 40px rgba(79, 172, 254, 0.4);
         }
       }
+
+      /* Logo visibility fixes */
+      .nav-logo {
+        /* Ensure logo is visible on all browsers */
+        -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text;
+        background-clip: text;
+      }
+
+      /* Fallback for browsers without gradient text support */
+      @supports not (background-clip: text) {
+        .nav-logo {
+          color: #4facfe !important;
+          background: none !important;
+          -webkit-text-fill-color: #4facfe !important;
+        }
+      }
+
+      /* Ensure proper contrast on large screens */
+      @media (min-width: 1200px) {
+        .nav-logo {
+          font-size: 2.2rem !important;
+          letter-spacing: 0.08em !important;
+        }
+      }
     </style>
   </head>
   <body>

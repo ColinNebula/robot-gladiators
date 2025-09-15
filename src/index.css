@@ -46,6 +46,23 @@ body {
   margin-bottom: 2rem;
 }
 
+/* Navigation logo with proper @supports fallback */
+.nav-logo {
+  background: linear-gradient(135deg, #00d4ff, #00f2fe, #764ba2);
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Fallback for browsers that don't support background-clip: text */
+@supports not (background-clip: text) {
+  .nav-logo {
+    color: #00d4ff !important;
+    background: none !important;
+  }
+}
+
 .stats-container {
   display: flex;
   justify-content: space-around;

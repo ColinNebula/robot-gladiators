@@ -209,18 +209,18 @@ const MainMenu = () => {
               onClick={item.action}
               style={{
                 background: selectedIndex === index 
-                  ? item.gradient 
-                  : '#1a1a3a',
+                  ? (item.title === 'Quick Battle' ? 'transparent' : item.gradient)
+                  : (item.title === 'Quick Battle' ? 'transparent' : '#1a1a3a'),
                 border: selectedIndex === index 
-                  ? '2px solid #ffd700' 
-                  : '1px solid #2a2a4a',
+                  ? (item.title === 'Quick Battle' ? '2px solid #ffd700' : '2px solid #ffd700')
+                  : (item.title === 'Quick Battle' ? '2px solid #ff6b6b' : '1px solid #2a2a4a'),
                 borderRadius: '16px',
                 padding: '2rem',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
                 boxShadow: selectedIndex === index 
                   ? '0 0 20px rgba(255, 215, 0, 0.3)' 
-                  : '0 4px 12px rgba(0,0,0,0.4)',
+                  : (item.title === 'Quick Battle' ? '0 0 15px rgba(255, 107, 107, 0.2)' : '0 4px 12px rgba(0,0,0,0.4)'),
                 position: 'relative',
                 overflow: 'hidden'
               }}

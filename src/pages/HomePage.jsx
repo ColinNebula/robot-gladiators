@@ -309,12 +309,12 @@ const HomePage = () => {
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/play')}
             style={{
-              padding: '1rem 2rem',
-              fontSize: '1.1rem',
+              padding: '1.5rem 3rem',
+              fontSize: '1.3rem',
               fontWeight: 'bold',
-              background: currentTheme.gradients.primary,
-              color: currentTheme.colors.background,
-              border: 'none',
+              background: 'transparent',
+              color: currentTheme.colors.primary,
+              border: `2px solid ${currentTheme.colors.primary}`,
               borderRadius: '12px',
               cursor: 'pointer',
               boxShadow: currentTheme.shadows.medium,
