@@ -79,21 +79,24 @@ export class VisualEffectsSystem {
       noise: { enabled: false, intensity: 0.1 }
     };
     
-    // Particle pools for performance
-    this.particlePools = {
-      spark: [],
-      smoke: [],
-      fire: [],
-      magic: [],
-      blood: [],
-      debris: []
-    };
-    
-    // Active effect instances
+    // Active effect instances (non-particle effects)
     this.activeEffects = [];
     this.timedEffects = [];
     
+    // Particle system reference (will be set during engine initialization)
+    this.particleSystem = null;
+    
     this.setupEventListeners();
+  }
+
+  initialize() {
+    console.log('🎨 Visual Effects System initialized');
+    
+    // Get reference to particle system
+    this.particleSystem = this.engine.getSystem('particles');
+    if (!this.particleSystem) {
+      console.warn('⚠️ ParticleSystem not found, some visual effects may not work');
+    }
   }
 
   setupEventListeners() {
@@ -196,9 +199,19 @@ export class VisualEffectsSystem {
   }
 
   updateParticleEffects(deltaTime) {
+    // Particle effects are now handled by the main ParticleSystem
+    // This method is kept for backwards compatibility but delegates to ParticleSystem
+    if (this.particleSystem) {
+      // ParticleSystem.update() is called by the engine, no need to call here
+    }
+    
+    // Update only non-particle visual effects
     this.activeEffects = this.activeEffects.filter(effect => {
-      effect.update(deltaTime);
-      return effect.isAlive();
+      if (effect.update) {
+        effect.update(deltaTime);
+        return effect.isAlive ? effect.isAlive() : true;
+      }
+      return true;
     });
   }
 
@@ -454,41 +467,44 @@ export class VisualEffectsSystem {
   }
 
   createParticleEffect(data) {
-    const effect = new AdvancedParticleEffect(data);
-    this.activeEffects.push(effect);
-    return effect;
+    // Delegate particle creation to main ParticleSystem
+    if (!this.particleSystem) {
+      console.warn('⚠️ ParticleSystem not available for visual effects');
+      return null;
+    }
+
+    const { x, y, type = 'sparks', count = 10, speed = { min: 50, max: 100 }, 
+            lifetime = { min: 500, max: 1000 }, color = '#ffffff', size = { min: 2, max: 4 },
+            direction = 0, spread = Math.PI * 2, gravity = false } = data;
+
+    // Map visual effects data to ParticleSystem emitter config
+    const emitterConfig = {
+      particleCount: count,
+      speed: speed,
+      life: { 
+        min: lifetime.min / 1000, 
+        max: lifetime.max / 1000 
+      },
+      size: size,
+      colors: Array.isArray(color) ? color : [color],
+      direction: direction,
+      spread: spread,
+      gravity: gravity,
+      duration: 0.1 // Burst effect
+    };
+
+    return this.particleSystem.createEmitter(type, x, y, emitterConfig);
   }
 
   createExplosion(data) {
     const { x, y, size = 1, color = '#ff6600' } = data;
     
-    // Core explosion
-    this.createParticleEffect({
-      x, y,
-      type: 'explosion',
-      count: Math.floor(20 * size),
-      speed: { min: 50 * size, max: 150 * size },
-      lifetime: { min: 300, max: 800 },
-      color: color,
-      size: { min: 2 * size, max: 8 * size },
-      gravity: 30,
-      fade: true
-    });
+    if (this.particleSystem) {
+      // Use main ParticleSystem explosion emitter
+      this.particleSystem.createExplosion(x, y, size);
+    }
     
-    // Smoke ring
-    this.createParticleEffect({
-      x, y,
-      type: 'smoke',
-      count: Math.floor(15 * size),
-      speed: { min: 20 * size, max: 60 * size },
-      lifetime: { min: 1000, max: 2000 },
-      color: '#666666',
-      size: { min: 4 * size, max: 12 * size },
-      fade: true,
-      expand: true
-    });
-    
-    // Screen shake
+    // Keep screen effects (non-particle)
     this.triggerScreenShake({
       intensity: 8 * size,
       duration: 300 * size
@@ -505,31 +521,10 @@ export class VisualEffectsSystem {
   createImpactEffect(data) {
     const { x, y, direction = 0, intensity = 1 } = data;
     
-    // Spark particles
-    this.createParticleEffect({
-      x, y,
-      type: 'sparks',
-      count: Math.floor(10 * intensity),
-      speed: { min: 30, max: 80 },
-      lifetime: { min: 200, max: 500 },
-      color: '#ffff00',
-      size: { min: 1, max: 3 },
-      direction: direction,
-      spread: Math.PI / 3,
-      gravity: 50
-    });
-    
-    // Dust cloud
-    this.createParticleEffect({
-      x, y,
-      type: 'dust',
-      count: Math.floor(8 * intensity),
-      speed: { min: 10, max: 30 },
-      lifetime: { min: 400, max: 800 },
-      color: '#cccccc',
-      size: { min: 2, max: 6 },
-      fade: true
-    });
+    if (this.particleSystem) {
+      // Spark particles using main ParticleSystem
+      this.particleSystem.createSparks(x, y, Math.floor(10 * intensity));
+    }
   }
 
   createTrailEffect(data) {
@@ -594,109 +589,6 @@ export class VisualEffectsSystem {
       x: screenX + this.camera.x - this.screenEffects.shake.offset.x,
       y: screenY + this.camera.y - this.screenEffects.shake.offset.y
     };
-  }
-}
-
-// Advanced particle effect class
-class AdvancedParticleEffect {
-  constructor(config) {
-    this.particles = [];
-    this.config = config;
-    this.alive = true;
-    
-    this.createParticles();
-  }
-
-  createParticles() {
-    const count = this.config.count || 10;
-    
-    for (let i = 0; i < count; i++) {
-      const particle = this.createParticle();
-      this.particles.push(particle);
-    }
-  }
-
-  createParticle() {
-    const config = this.config;
-    const angle = config.direction !== undefined 
-      ? config.direction + (Math.random() - 0.5) * (config.spread || Math.PI * 2)
-      : Math.random() * Math.PI * 2;
-    
-    const speed = config.speed 
-      ? config.speed.min + Math.random() * (config.speed.max - config.speed.min)
-      : 50;
-    
-    const lifetime = config.lifetime
-      ? config.lifetime.min + Math.random() * (config.lifetime.max - config.lifetime.min)
-      : 1000;
-    
-    const size = config.size
-      ? config.size.min + Math.random() * (config.size.max - config.size.min)
-      : 2;
-    
-    return {
-      x: config.x,
-      y: config.y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      size: size,
-      initialSize: size,
-      lifetime: lifetime,
-      maxLifetime: lifetime,
-      color: config.color || '#ffffff',
-      alpha: 1
-    };
-  }
-
-  update(deltaTime) {
-    const dt = deltaTime / 1000;
-    
-    this.particles = this.particles.filter(particle => {
-      // Update position
-      particle.x += particle.vx * dt;
-      particle.y += particle.vy * dt;
-      
-      // Apply gravity
-      if (this.config.gravity) {
-        particle.vy += this.config.gravity * dt;
-      }
-      
-      // Update lifetime
-      particle.lifetime -= deltaTime;
-      
-      // Update alpha for fading
-      if (this.config.fade) {
-        particle.alpha = particle.lifetime / particle.maxLifetime;
-      }
-      
-      // Update size for expanding
-      if (this.config.expand) {
-        const progress = 1 - (particle.lifetime / particle.maxLifetime);
-        particle.size = particle.initialSize * (1 + progress * 2);
-      }
-      
-      return particle.lifetime > 0;
-    });
-    
-    if (this.particles.length === 0) {
-      this.alive = false;
-    }
-  }
-
-  render(ctx) {
-    for (const particle of this.particles) {
-      ctx.save();
-      ctx.globalAlpha = particle.alpha;
-      ctx.fillStyle = particle.color;
-      ctx.beginPath();
-      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-  }
-
-  isAlive() {
-    return this.alive;
   }
 }
 

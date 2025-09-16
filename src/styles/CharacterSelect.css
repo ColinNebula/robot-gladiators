@@ -1,0 +1,494 @@
+/**
+ * Enhanced Character Selection Styles
+ * 
+ * Modern glassmorphism design with smooth animations and transitions
+ */
+
+.enhanced-character-select {
+  --primary-gradient: linear-gradient(135deg, #4facfe 0%, #00c4ff 100%);
+  --secondary-gradient: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+  --success-gradient: linear-gradient(135deg, #2ed573 0%, #20bf6b 100%);
+  --warning-gradient: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: blur(15px);
+  
+  --shadow-light: 0 8px 25px rgba(0, 0, 0, 0.15);
+  --shadow-medium: 0 12px 35px rgba(0, 0, 0, 0.25);
+  --shadow-heavy: 0 20px 50px rgba(0, 0, 0, 0.35);
+  
+  --transition-smooth: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --transition-fast: all 0.2s ease;
+  --transition-slow: all 0.6s ease;
+}
+
+/* Character Card Animations */
+@keyframes cardHover {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    transform: scale(1.05) translateY(-8px);
+  }
+}
+
+@keyframes cardSelect {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(79, 172, 254, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(79, 172, 254, 0.6);
+  }
+}
+
+@keyframes rarityShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Enhanced Character Card Styles */
+.character-card-enhanced {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-radius: 20px;
+  border: 2px solid var(--glass-border);
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  overflow: hidden;
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.character-card-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+  pointer-events: none;
+}
+
+.character-card-enhanced:hover::before {
+  transform: translateX(100%);
+}
+
+.character-card-enhanced:hover {
+  animation: cardHover 0.3s ease forwards;
+  box-shadow: var(--shadow-heavy);
+}
+
+.character-card-enhanced.selected {
+  animation: cardSelect 0.4s ease forwards;
+  border-color: var(--primary-color, #4facfe);
+  background: linear-gradient(
+    135deg,
+    var(--primary-color, #4facfe)15,
+    var(--secondary-color, #00c4ff)15
+  );
+}
+
+.character-card-enhanced.selected::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    45deg,
+    var(--primary-color, #4facfe),
+    var(--secondary-color, #00c4ff),
+    var(--primary-color, #4facfe)
+  );
+  background-size: 200% 200%;
+  animation: rarityShimmer 2s linear infinite;
+  border-radius: 22px;
+  z-index: -1;
+}
+
+.character-card-enhanced.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+}
+
+.character-card-enhanced.locked:hover {
+  transform: none;
+  animation: none;
+}
+
+/* Rarity Specific Styles */
+.rarity-common {
+  --rarity-color: #ffffff;
+  --rarity-glow: rgba(255, 255, 255, 0.3);
+}
+
+.rarity-rare {
+  --rarity-color: #4facfe;
+  --rarity-glow: rgba(79, 172, 254, 0.4);
+}
+
+.rarity-epic {
+  --rarity-color: #9c88ff;
+  --rarity-glow: rgba(156, 136, 255, 0.4);
+}
+
+.rarity-legendary {
+  --rarity-color: #ffd700;
+  --rarity-glow: rgba(255, 215, 0, 0.5);
+}
+
+.character-rarity-gem {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 15px var(--rarity-glow);
+  background: linear-gradient(135deg, var(--rarity-color), var(--rarity-color)aa);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Character Avatar Styles */
+.character-avatar-enhanced {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  transition: var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.character-avatar-enhanced::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg) translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.character-card-enhanced:hover .character-avatar-enhanced::before {
+  transform: rotate(45deg) translateX(100%);
+}
+
+.character-card-enhanced:hover .character-avatar-enhanced {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 0 30px var(--primary-color, #4facfe)60;
+}
+
+/* Stats Grid Styles */
+.character-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.stat-item {
+  background: var(--glass-bg);
+  border-radius: 10px;
+  padding: 0.75rem;
+  text-align: center;
+  transition: var(--transition-fast);
+  border: 1px solid var(--glass-border);
+}
+
+.stat-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  background: linear-gradient(135deg, var(--stat-color, #fff), var(--stat-color, #fff)cc);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Ability Tags */
+.ability-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.ability-tag {
+  font-size: 0.7rem;
+  border-radius: 12px;
+  padding: 0.25rem 0.5rem;
+  font-weight: 500;
+  background: linear-gradient(135deg, var(--tag-color, #4facfe)30, var(--tag-color, #4facfe)20);
+  color: var(--tag-color, #4facfe);
+  border: 1px solid var(--tag-color, #4facfe)40;
+  transition: var(--transition-fast);
+}
+
+.ability-tag:hover {
+  background: var(--tag-color, #4facfe)40;
+  transform: translateY(-1px);
+}
+
+/* Progress Bar Styles */
+.character-progress {
+  margin-top: auto;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.9;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--glass-border);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary-gradient);
+  transition: width 0.6s ease;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: progressShimmer 2s infinite;
+}
+
+@keyframes progressShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Button Enhancements */
+.btn-enhanced {
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.btn-enhanced:hover::before {
+  left: 100%;
+}
+
+.btn-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.btn-primary {
+  background: var(--primary-gradient);
+  color: white;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+}
+
+.btn-secondary {
+  background: var(--glass-bg);
+  color: white;
+  border: 2px solid var(--glass-border);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .enhanced-character-select {
+    padding: 1rem;
+  }
+  
+  .character-card-enhanced {
+    padding: 1rem;
+  }
+  
+  .character-avatar-enhanced {
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+  }
+  
+  .character-stats-grid {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 0.5rem;
+  }
+  
+  .stat-item {
+    padding: 0.5rem;
+  }
+  
+  .stat-value {
+    font-size: 1.2rem;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .character-card-enhanced,
+  .character-avatar-enhanced,
+  .btn-enhanced {
+    transition: none;
+    animation: none;
+  }
+  
+  .character-card-enhanced:hover {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .character-card-enhanced {
+    border: 3px solid #ffffff;
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .character-card-enhanced.selected {
+    border-color: #ffff00;
+    background: rgba(255, 255, 0, 0.2);
+  }
+}

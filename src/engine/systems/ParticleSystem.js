@@ -176,6 +176,36 @@ export class ParticleSystem {
       gravity: false,
       glow: true
     });
+
+    // Dust emitter for impact effects
+    this.registerEmitterType('dust', {
+      particleCount: 8,
+      duration: 0.1,
+      spread: Math.PI * 2,
+      speed: { min: 10, max: 30 },
+      life: { min: 0.4, max: 0.8 },
+      size: { min: 2, max: 6 },
+      colors: ['#cccccc', '#aaaaaa', '#888888'],
+      scaleEnd: 2,
+      alphaEnd: 0,
+      gravity: false,
+      drag: 0.98
+    });
+
+    // Energy emitter for special effects
+    this.registerEmitterType('energy', {
+      particleCount: 20,
+      duration: 0.5,
+      spread: Math.PI / 4,
+      speed: { min: 40, max: 80 },
+      life: { min: 0.6, max: 1.2 },
+      size: { min: 1, max: 3 },
+      colors: ['#00ffff', '#0088ff', '#ffffff'],
+      scaleEnd: 0.1,
+      alphaEnd: 0,
+      gravity: false,
+      glow: true
+    });
   }
 
   registerEmitterType(name, config) {
@@ -529,6 +559,32 @@ export class ParticleSystem {
       particleCount: 5,
       colors: [color],
       duration: 0.1
+    });
+  }
+
+  // Enhanced visual effect methods
+  createImpactSparks(x, y, intensity = 1) {
+    return this.createEmitter('sparks', x, y, {
+      particleCount: Math.floor(10 * intensity),
+      speed: { min: 50 * intensity, max: 120 * intensity },
+      life: { min: 0.2, max: 0.5 },
+      colors: ['#ffff00', '#ffffff', '#ffaa44']
+    });
+  }
+
+  createDustCloud(x, y, intensity = 1) {
+    return this.createEmitter('dust', x, y, {
+      particleCount: Math.floor(8 * intensity),
+      speed: { min: 10 * intensity, max: 30 * intensity },
+      life: { min: 0.4, max: 0.8 }
+    });
+  }
+
+  createEnergyBurst(x, y, color = '#00ffff') {
+    return this.createEmitter('energy', x, y, {
+      colors: [color],
+      particleCount: 15,
+      duration: 0.3
     });
   }
 

@@ -1665,9 +1665,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
   
   // Round announcement system
   const [roundAnnouncement, setRoundAnnouncement] = useState({
-    active: true, // Start with announcement for round 1
-    phase: 'announcing', // 'announcing', 'fight', 'none'
-    timer: 180, // 3 seconds at 60 FPS for announcement
+    active: false, // Don't start with announcement until game begins
+    phase: 'none', // 'announcing', 'fight', 'none'
+    timer: 0, // Will be set when round starts
     roundToShow: 1
   });
 
@@ -1703,6 +1703,33 @@ const SideScroller = ({ character, onBackToMenu }) => {
     lastDpadInput: { x: 0, y: 0 },
     navigationCooldown: 0
   });
+
+  // Game state reset function
+  const resetGameState = useCallback(() => {
+    console.log('🔄 Resetting game state...');
+    
+    // Reset round announcement
+    setRoundAnnouncement({
+      active: true,
+      phase: 'announcing',
+      timer: 180,
+      roundToShow: 1
+    });
+    
+    // Reset game states
+    setRoundActive(false);
+    setIsPaused(false);
+    setGameOver({ active: false, winner: null, reason: '' });
+    setMatchComplete(false);
+    setMatchScore({ player: 0, enemy: 0 });
+    setCurrentRound(1);
+    setGameTime(3600);
+    
+    // Reset combo
+    setCombo({ player: 0, enemy: 0, timer: 0 });
+    
+    console.log('✅ Game state reset complete');
+  }, []);
 
   // Pause menu handlers
   const handleResumeGame = () => {
@@ -1795,27 +1822,26 @@ const SideScroller = ({ character, onBackToMenu }) => {
     
   }, [createParticles]);
 
-  // Force initial state visibility
+  // Initialize game state properly
   useEffect(() => {
-    console.log('🎯 Ensuring round announcement visibility...');
+    console.log('🎯 Initializing game state...');
     
-    // Make sure round announcement is properly initialized and visible
-    setTimeout(() => {
-      setRoundAnnouncement(prev => {
-        console.log('Round announcement current state:', prev);
-        if (!prev.active) {
-          console.log('🔄 Reactivating round announcement for visibility');
-          return {
-            ...prev,
-            active: true,
-            phase: 'announcing',
-            timer: 180,
-            roundToShow: 1
-          };
-        }
-        return prev;
+    // Start the first round announcement when game loads
+    const startFirstRound = () => {
+      setRoundAnnouncement({
+        active: true,
+        phase: 'announcing',
+        timer: 180, // 3 seconds at 60 FPS
+        roundToShow: 1
       });
-    }, 50);
+      setRoundActive(false); // Make sure round isn't active during announcement
+      console.log('🥊 Starting Round 1 announcement');
+    };
+    
+    // Start after a brief delay to ensure everything is initialized
+    const timeoutId = setTimeout(startFirstRound, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Main game loop useEffect
@@ -5174,11 +5200,27 @@ const SideScroller = ({ character, onBackToMenu }) => {
         frameCount++;
         
         if (!isPaused && !gameOver.active) {
-          // Always run the game, use fallback rendering if sprites not loaded
+          // Normal game update
           update(deltaTime);
           draw();
         } else {
-          // Game is paused or over, still update sprite animations and draw current state
+          // Game is paused or over, but still handle round announcements
+          // This ensures READY/FIGHT doesn't get stuck when pausing during announcement
+          if (roundAnnouncement.active) {
+            setRoundAnnouncement(prev => {
+              const newTimer = prev.timer - 1;
+              
+              if (newTimer <= 0) {
+                // Announcement finished, prepare to start the round when unpaused
+                console.log(`🥊 Round ${prev.roundToShow} announcement complete`);
+                return { active: false, phase: 'none', timer: 0, roundToShow: prev.roundToShow };
+              }
+              
+              return { ...prev, timer: newTimer };
+            });
+          }
+          
+          // Update sprite animations and draw current state
           updateSpritesOnly();
           draw();
         }
@@ -5239,6 +5281,13 @@ const SideScroller = ({ character, onBackToMenu }) => {
       // Pause/unpause functionality
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
         setIsPaused(prev => !prev);
+        return;
+      }
+      
+      // Restart game (R key) - useful when game gets stuck
+      if (e.key === 'r' || e.key === 'R') {
+        console.log('🔄 Keyboard restart triggered');
+        resetGameState();
         return;
       }
       
@@ -5906,6 +5955,15 @@ const SideScroller = ({ character, onBackToMenu }) => {
           setIsPaused(prev => !prev);
         }
         
+        // Restart game (Select/View button - for when game gets stuck)
+        const restartPressed = gp.buttons[8]?.pressed; // Select/View button
+        const lastRestartPressed = lastGamepadState.buttons[8];
+        
+        if (restartPressed && !lastRestartPressed) {
+          console.log(`${gamepadType} controller: Game restart triggered`);
+          resetGameState();
+        }
+        
         // Store current state for next frame comparison
         lastGamepadState = {
           buttons: gp.buttons.map(btn => btn?.pressed || false),
@@ -6054,6 +6112,9 @@ const SideScroller = ({ character, onBackToMenu }) => {
         <div style={{ fontSize: '0.85rem' }}>L2: Normal | R2: Power</div>
         <div style={{ fontSize: '0.85rem', color: '#ff6600' }}>
           D-pad ⬇️+R2: 🔥 Fire | D-pad ⬆️+R2: ❄️ Ice | D-pad ⬅️+R2: ✨ Ember
+        </div>
+        <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#ffd700' }}>
+          <strong>ESC/P:</strong> Pause | <strong>R:</strong> Restart Game
         </div>
         <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '5px' }}>
           Fire: Rising flames + burning effects<br/>

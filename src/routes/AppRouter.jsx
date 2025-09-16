@@ -11,7 +11,7 @@ const SinglePlayerPage = lazy(() => import('../pages/SinglePlayerPage'));
 const TwoPlayerPage = lazy(() => import('../pages/TwoPlayerPage'));
 const VersusScreenPage = lazy(() => import('../pages/VersusScreenPage'));
 const SideScrollerPage = lazy(() => import('../pages/SideScrollerPage'));
-const EnhancedDemoPage = lazy(() => import('../pages/EnhancedDemoPage'));
+const EnhancedGamePage = lazy(() => import('../pages/EnhancedGamePage'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 const LeaderboardPage = lazy(() => import('../pages/LeaderboardPage'));
@@ -60,9 +60,9 @@ const routes = [
     component: SideScrollerPage
   },
   {
-    path: '/enhanced-demo',
-    name: 'Enhanced Engine Demo',
-    component: EnhancedDemoPage
+    path: '/enhanced-game',
+    name: 'Enhanced Game',
+    component: EnhancedGamePage
   },
   {
     path: '/settings',

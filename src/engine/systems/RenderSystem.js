@@ -1,15 +1,21 @@
 /**
- * Render System - High-Performance 2D Rendering Engine
+ * Render System - High-Performance 2D Rendering Engine with Enhanced Sprite Rendering
  * 
  * Handles all rendering operations including sprites, animations, effects,
  * and UI elements with optimized batching and culling.
  */
+
+import EnhancedSpriteRenderer from './EnhancedSpriteRenderer.js';
 
 export class RenderSystem {
   constructor(engine) {
     this.engine = engine;
     this.ctx = engine.getContext();
     this.canvas = engine.getCanvas();
+    
+    // Initialize enhanced sprite renderer
+    this.spriteRenderer = new EnhancedSpriteRenderer();
+    this.spriteRenderer.initialize(this.canvas, this.ctx);
     
     // Rendering state
     this.camera = {
@@ -29,19 +35,22 @@ export class RenderSystem {
       ['ui', { zIndex: 200, entities: [] }]
     ]);
     
-    // Rendering statistics
+    // Enhanced rendering statistics
     this.stats = {
       entitiesRendered: 0,
       entitiesCulled: 0,
       drawCalls: 0,
-      frameTime: 0
+      frameTime: 0,
+      spritesInCache: 0,
+      memoryUsage: 0,
+      batchedSprites: 0
     };
     
     // Asset cache
     this.imageCache = new Map();
     this.fontCache = new Map();
     
-    console.log('🎨 Render System initialized');
+    console.log('🎨 Enhanced Render System initialized with sprite batching');
   }
 
   initialize() {
@@ -146,6 +155,15 @@ export class RenderSystem {
       this.renderLayer(ctx, layerName, layer);
     });
     
+    // Flush all batched sprites at once for better performance
+    this.spriteRenderer.flushRenderQueue();
+    
+    // Update enhanced statistics
+    const spriteStats = this.spriteRenderer.getPerformanceStats();
+    this.stats.spritesInCache = spriteStats.cachedSprites;
+    this.stats.memoryUsage = spriteStats.memoryUsage;
+    this.stats.batchedSprites = spriteStats.queuedSprites;
+    
     // Restore context state
     ctx.restore();
     
@@ -248,31 +266,136 @@ export class RenderSystem {
   }
 
   renderSprite(ctx, sprite, transform) {
-    const image = this.loadImage(sprite.imagePath);
-    if (!image || !image.complete) return;
-    
-    // Calculate frame position for sprite sheets
-    const frameX = (sprite.currentFrame % sprite.framesPerRow || 1) * sprite.frameWidth;
-    const frameY = Math.floor(sprite.currentFrame / (sprite.framesPerRow || 1)) * sprite.frameHeight;
-    
-    // Apply sprite flipping
-    if (sprite.flipX || sprite.flipY) {
-      ctx.save();
-      ctx.scale(sprite.flipX ? -1 : 1, sprite.flipY ? -1 : 1);
-      ctx.translate(
-        sprite.flipX ? -transform.width : 0,
-        sprite.flipY ? -transform.height : 0
-      );
+    // Use enhanced sprite renderer for better performance and effects
+    const renderOptions = {
+      x: transform.x,
+      y: transform.y,
+      width: transform.width,
+      height: transform.height,
+      frameX: (sprite.currentFrame % (sprite.framesPerRow || 1)) * sprite.frameWidth,
+      frameY: Math.floor(sprite.currentFrame / (sprite.framesPerRow || 1)) * sprite.frameHeight,
+      frameWidth: sprite.frameWidth,
+      frameHeight: sprite.frameHeight,
+      rotation: transform.rotation || 0,
+      flipX: sprite.flipX || false,
+      flipY: sprite.flipY || false,
+      alpha: sprite.alpha !== undefined ? sprite.alpha : 1,
+      tint: sprite.tint || null,
+      scale: sprite.scale || 1,
+      anchor: sprite.anchor || { x: 0.5, y: 0.5 },
+      effects: sprite.effects || {},
+      zIndex: sprite.zIndex || 0
+    };
+
+    // Load sprite if not cached
+    if (!this.spriteRenderer.imageCache.has(sprite.imagePath)) {
+      this.spriteRenderer.loadSprite(sprite.imagePath, {
+        tint: sprite.tint,
+        filter: sprite.filter,
+        scale: sprite.preScale || 1
+      }).then(loadedSprite => {
+        this.spriteRenderer.renderSprite(loadedSprite, renderOptions);
+      });
+    } else {
+      const loadedSprite = this.spriteRenderer.imageCache.get(sprite.imagePath);
+      this.spriteRenderer.renderSprite(loadedSprite, renderOptions);
     }
+
+    // Apply animation effects
+    if (sprite.effects) {
+      this.applyAdvancedSpriteEffects(ctx, sprite, transform);
+    }
+  }
+
+  // Enhanced sprite effects system
+  applyAdvancedSpriteEffects(ctx, sprite, transform) {
+    const effects = sprite.effects;
     
-    // Render sprite
-    ctx.drawImage(
-      image,
-      frameX, frameY, sprite.frameWidth, sprite.frameHeight,
-      0, 0, transform.width, transform.height
+    // Glow effect
+    if (effects.glow) {
+      ctx.save();
+      ctx.shadowColor = effects.glow.color || sprite.tint || '#ffffff';
+      ctx.shadowBlur = effects.glow.intensity || 20;
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.restore();
+    }
+
+    // Trail effect for moving sprites
+    if (effects.trail && sprite.velocity) {
+      this.renderSpriteTrail(ctx, sprite, transform);
+    }
+
+    // Pulse effect
+    if (effects.pulse) {
+      const pulseScale = 1 + Math.sin(Date.now() * 0.01) * effects.pulse.amplitude;
+      ctx.scale(pulseScale, pulseScale);
+    }
+
+    // Shake effect
+    if (effects.shake) {
+      const shakeX = (Math.random() - 0.5) * effects.shake.intensity;
+      const shakeY = (Math.random() - 0.5) * effects.shake.intensity;
+      ctx.translate(shakeX, shakeY);
+    }
+
+    // Afterimage effect
+    if (effects.afterimage && sprite.previousPositions) {
+      this.renderAfterimage(ctx, sprite, transform);
+    }
+  }
+
+  // Render sprite trail effect
+  renderSpriteTrail(ctx, sprite, transform) {
+    if (!sprite.trailPositions) sprite.trailPositions = [];
+    
+    // Add current position to trail
+    sprite.trailPositions.push({ x: transform.x, y: transform.y, time: Date.now() });
+    
+    // Remove old trail points
+    const trailLifetime = sprite.effects.trail.lifetime || 500;
+    sprite.trailPositions = sprite.trailPositions.filter(
+      pos => Date.now() - pos.time < trailLifetime
     );
+
+    // Render trail
+    ctx.save();
+    sprite.trailPositions.forEach((pos, index) => {
+      const age = Date.now() - pos.time;
+      const alpha = 1 - (age / trailLifetime);
+      const scale = 0.5 + (alpha * 0.5);
+      
+      ctx.globalAlpha = alpha * 0.3;
+      this.spriteRenderer.renderSprite(sprite.image, {
+        x: pos.x,
+        y: pos.y,
+        width: transform.width * scale,
+        height: transform.height * scale,
+        alpha: alpha * 0.3,
+        tint: sprite.effects.trail.color || sprite.tint
+      });
+    });
+    ctx.restore();
+  }
+
+  // Render afterimage effect
+  renderAfterimage(ctx, sprite, transform) {
+    const afterimageCount = sprite.effects.afterimage.count || 3;
+    const spacing = sprite.effects.afterimage.spacing || 10;
     
-    if (sprite.flipX || sprite.flipY) {
+    for (let i = 1; i <= afterimageCount; i++) {
+      const alpha = 1 - (i / afterimageCount);
+      const offset = i * spacing;
+      
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.5;
+      this.spriteRenderer.renderSprite(sprite.image, {
+        x: transform.x - offset,
+        y: transform.y,
+        width: transform.width,
+        height: transform.height,
+        alpha: alpha * 0.5,
+        tint: sprite.effects.afterimage.color || '#ffffff'
+      });
       ctx.restore();
     }
   }
@@ -447,7 +570,7 @@ export class RenderSystem {
     this.ctx.restore();
   }
 
-  // Utility methods
+  // Enhanced utility methods
   updateStats() {
     // Statistics are updated during render calls
   }
@@ -460,11 +583,48 @@ export class RenderSystem {
     return { ...this.camera };
   }
 
+  // Preload sprites for better performance
+  async preloadSprites(spriteList) {
+    console.log(`🖼️ Preloading ${spriteList.length} sprites...`);
+    return this.spriteRenderer.preloadSprites(spriteList);
+  }
+
+  // Get enhanced rendering statistics
+  getEnhancedStats() {
+    const baseStats = this.getStats();
+    const spriteStats = this.spriteRenderer.getPerformanceStats();
+    
+    return {
+      ...baseStats,
+      spriteRenderer: spriteStats,
+      memoryUsage: this.formatBytes(spriteStats.memoryUsage),
+      cacheEfficiency: spriteStats.cachedSprites > 0 ? 
+        (baseStats.entitiesRendered / spriteStats.cachedSprites * 100).toFixed(1) + '%' : '0%'
+    };
+  }
+
+  // Format bytes for display
+  formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // Clear sprite cache to free memory
+  clearSpriteCache() {
+    this.spriteRenderer.clearCache();
+    console.log('🧹 Sprite cache cleared');
+  }
+
   // Cleanup
   destroy() {
     this.imageCache.clear();
     this.fontCache.clear();
     this.layers.clear();
+    this.spriteRenderer.clearCache();
+    console.log('🗑️ Render System destroyed');
   }
 }
 
