@@ -272,6 +272,9 @@ class EnhancedDemoScene extends Scene {
       toggleAI: [{ type: 'key', code: 'KeyA' }],
       toggleAnimation: [{ type: 'key', code: 'KeyN' }],
       spawnParticles: [{ type: 'key', code: 'KeyP' }],
+      combatDemo: [{ type: 'key', code: 'KeyC' }],
+      explosionEffect: [{ type: 'key', code: 'KeyE' }],
+      soundDemo: [{ type: 'key', code: 'KeyS' }],
       resetDemo: [{ type: 'key', code: 'KeyR' }]
     });
   }
@@ -300,6 +303,18 @@ class EnhancedDemoScene extends Scene {
     
     if (inputSystem.wasActionPressed('demo', 'spawnParticles')) {
       this.spawnDemoParticles();
+    }
+    
+    if (inputSystem.wasActionPressed('demo', 'combatDemo')) {
+      this.runCombatDemo();
+    }
+    
+    if (inputSystem.wasActionPressed('demo', 'explosionEffect')) {
+      this.createExplosionDemo();
+    }
+    
+    if (inputSystem.wasActionPressed('demo', 'soundDemo')) {
+      this.runSoundDemo();
     }
     
     if (inputSystem.wasActionPressed('demo', 'resetDemo')) {
@@ -402,6 +417,120 @@ class EnhancedDemoScene extends Scene {
     console.log('💥 Demo particles spawned!');
   }
 
+  runCombatDemo() {
+    const combatSystem = this.engine.getSystem('combat');
+    const visualEffects = this.engine.getSystem('visualEffects');
+    
+    if (!combatSystem || !visualEffects) return;
+    
+    // Find player and enemy entities
+    const player = this.entities.find(e => e.tag === 'player');
+    const enemy = this.entities.find(e => e.tag === 'enemy');
+    
+    if (player && enemy) {
+      // Initialize combat for both entities if not already done
+      if (!combatSystem.getCombatData(player.id)) {
+        combatSystem.initializeCombat(player.id, {
+          maxHealth: 100,
+          attack: 15,
+          defense: 8,
+          criticalChance: 0.2
+        });
+      }
+      
+      if (!combatSystem.getCombatData(enemy.id)) {
+        combatSystem.initializeCombat(enemy.id, {
+          maxHealth: 80,
+          attack: 12,
+          defense: 5,
+          criticalChance: 0.1
+        });
+      }
+      
+      // Trigger combat sequence
+      this.engine.eventBus.emit('combat:attack', {
+        attackerId: player.id,
+        targetId: enemy.id,
+        attackType: 'heavy',
+        damage: 25,
+        timing: Math.random() * 200
+      });
+      
+      // Add visual effects
+      visualEffects.createImpactEffect({
+        x: enemy.transform.x + enemy.transform.width / 2,
+        y: enemy.transform.y + enemy.transform.height / 2,
+        intensity: 1.5
+      });
+      
+      // Screen shake
+      visualEffects.triggerScreenShake({
+        intensity: 8,
+        duration: 400
+      });
+      
+      console.log('⚔️ Combat demo executed!');
+    }
+  }
+
+  createExplosionDemo() {
+    const visualEffects = this.engine.getSystem('visualEffects');
+    const enhancedAudio = this.engine.getSystem('enhancedAudio');
+    
+    if (!visualEffects) return;
+    
+    // Create explosion at random location
+    const x = 200 + Math.random() * 800;
+    const y = 200 + Math.random() * 200;
+    
+    visualEffects.createExplosion({
+      x, y,
+      size: 1.5,
+      color: '#ff6600'
+    });
+    
+    // Play explosion sound if enhanced audio is available
+    if (enhancedAudio) {
+      enhancedAudio.playExplosionSound(1.5);
+    }
+    
+    console.log('💥 Explosion demo created!');
+  }
+
+  runSoundDemo() {
+    const enhancedAudio = this.engine.getSystem('enhancedAudio');
+    
+    if (!enhancedAudio) {
+      console.log('Enhanced audio system not available');
+      return;
+    }
+    
+    // Play various demo sounds
+    const sounds = [
+      { type: 'hit', intensity: 1.2 },
+      { type: 'footstep', surface: 'metal' },
+      { type: 'explosion', size: 0.8 }
+    ];
+    
+    sounds.forEach((sound, index) => {
+      setTimeout(() => {
+        switch (sound.type) {
+          case 'hit':
+            enhancedAudio.playHitSound(sound.intensity);
+            break;
+          case 'footstep':
+            enhancedAudio.playFootstep(sound.surface);
+            break;
+          case 'explosion':
+            enhancedAudio.playExplosionSound(sound.size);
+            break;
+        }
+      }, index * 500);
+    });
+    
+    console.log('🔊 Sound demo playing!');
+  }
+
   updateDemoEffects(deltaTime) {
     // Update demo-specific effects
     this.demoTimer = (this.demoTimer || 0) + deltaTime;
@@ -500,7 +629,7 @@ class EnhancedDemoScene extends Scene {
     
     // Draw demo info
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(10, 10, 300, 150);
+    ctx.fillRect(10, 10, 300, 200);
     
     ctx.fillStyle = '#00ff88';
     ctx.font = 'bold 14px Arial';
@@ -513,7 +642,10 @@ class EnhancedDemoScene extends Scene {
     ctx.fillText('A - Toggle AI Behavior', 20, 90);
     ctx.fillText('N - Toggle Animations', 20, 110);
     ctx.fillText('P - Spawn Particles', 20, 130);
-    ctx.fillText('R - Reset Demo', 20, 150);
+    ctx.fillText('C - Combat Demo', 20, 150);
+    ctx.fillText('E - Explosion Effect', 20, 170);
+    ctx.fillText('S - Sound Demo', 20, 190);
+    ctx.fillText('R - Reset Demo', 20, 210);
     
     ctx.restore();
   }

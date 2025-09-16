@@ -16,6 +16,12 @@ import { StateSystem } from './systems/StateSystem.js';
 import { AnimationSystem } from './systems/AnimationSystem.js';
 import { LightingSystem } from './systems/LightingSystem.js';
 import { MemoryPoolSystem } from './systems/MemoryPoolSystem.js';
+import { CombatSystem } from './systems/CombatSystem.js';
+import { PowerUpSystem } from './systems/PowerUpSystem.js';
+import { VisualEffectsSystem } from './systems/VisualEffectsSystem.js';
+import { EnhancedAudioSystem } from './systems/EnhancedAudioSystem.js';
+import { AchievementSystem } from './systems/AchievementSystem.js';
+import { PerformanceOptimizationSystem } from './systems/PerformanceOptimizationSystem.js';
 import { EntityManager } from './core/EntityManager.js';
 import { SceneManager } from './core/SceneManager.js';
 import { AssetManager } from './core/AssetManager.js';
@@ -69,6 +75,7 @@ export class GameEngine {
     // Initialize all engine systems
     this.systems = {
       memory: new MemoryPoolSystem(this),
+      performance: new PerformanceOptimizationSystem(this),
       state: new StateSystem(this),
       input: new InputSystem(this),
       ai: new AISystem(this),
@@ -78,11 +85,16 @@ export class GameEngine {
       particles: new ParticleSystem(this),
       lighting: new LightingSystem(this),
       audio: new AudioSystem(this),
+      enhancedAudio: new EnhancedAudioSystem(this),
+      combat: new CombatSystem(this),
+      powerups: new PowerUpSystem(this),
+      visualEffects: new VisualEffectsSystem(this),
+      achievements: new AchievementSystem(this),
       render: new RenderSystem(this)
     };
 
-    // System initialization order matters - memory and state first, render last
-    this.systemOrder = ['memory', 'state', 'input', 'ai', 'physics', 'collision', 'animation', 'particles', 'lighting', 'audio', 'render'];
+    // System initialization order matters - memory and performance first, render last
+    this.systemOrder = ['memory', 'performance', 'state', 'input', 'ai', 'physics', 'collision', 'animation', 'particles', 'lighting', 'audio', 'enhancedAudio', 'combat', 'powerups', 'visualEffects', 'achievements', 'render'];
 
     // Initialize each system
     this.systemOrder.forEach(systemName => {
